@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from annotator import AutoAnnotator
 from typing import List
@@ -6,7 +6,7 @@ from PIL import Image, UnidentifiedImageError
 import io
 import os
 
-app = FastAPI()
+router = APIRouter()
 annotator = AutoAnnotator()
 
 
@@ -30,7 +30,7 @@ def get_images_dir(dataset_name: str) -> str:
     return path
 
 
-@app.post("/upload/{dataset_name}")
+@router.post("/upload/{dataset_name}")
 async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
     '''загрузка конкретного набора файлов'''
     images_dir = get_images_dir(dataset_name)
@@ -52,7 +52,7 @@ async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
     return {"dataset": dataset_name, "uploaded": saved}
 
 
-@app.post("/predict/{dataset_name}")
+@router.post("/predict/{dataset_name}")
 async def predict(dataset_name: str, filenames: List[str]):
     '''путь к файлам'''
     images_dir = get_images_dir(dataset_name)
@@ -62,14 +62,13 @@ async def predict(dataset_name: str, filenames: List[str]):
         '''проверка на существование'''
         if not os.path.exists(image_path):
             raise HTTPException(status_code=404, detail=f"{filename} -  файл не найден в {dataset_name}")
-        image = Image.open(image_path)
         '''предикты'''
-        annotations = annotator.predict(image)
+        annotations = annotator.predict(image_path)
         response.append({"filename": filename, "annotations": annotations})
     return response
 
 
-@app.post("/train/{dataset_name}")
+@router.post("/train/{dataset_name}")
 async def train(dataset_name: str, labeled_images: List[LabeledImage]):
     '''сохранение меток и запуск обучения'''
 
