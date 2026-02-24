@@ -1,0 +1,8 @@
+.datasets-page-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin-top: 80px;
+  letter-spacing: -1.2px;
+  display: flex;
+  width: min(100%, 1200px);
+}

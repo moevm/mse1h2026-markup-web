@@ -9,7 +9,7 @@
 .section-welcome__title {
   font-weight: 800;
   font-size: 36px;
-  letter-spacing: 0.9px;
+  letter-spacing: -0.9px;
 }
 
 .section-welcome__text {

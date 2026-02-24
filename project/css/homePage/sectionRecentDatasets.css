@@ -7,7 +7,7 @@
 
 .section-recent-datasets__header {
   display: flex;
-  width: min(100%, 900px);
+  width: min(100%, 1200px);
   justify-content: space-between;
 }
 
@@ -39,7 +39,7 @@
 .section-recent-datasets__datasets-items {
   display: flex;
   align-items: center;
-  width: min(100%, 900px);
+  width: min(100%, 1200px);
   margin-top: 24px;
 }
 

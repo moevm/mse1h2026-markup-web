@@ -1,0 +1,29 @@
+.section-datasets-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-datasets-header__subtitle {
+  font-size: 16px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.section-datasets-header__button {
+  width: 186px;
+  height: 40px;
+  box-shadow: 0 20px 25px -5px rgba(101, 103, 241, 0.2), 0 8px 10px -6px rgba(101, 103, 241, 0.2);
+  background-color: #6567F1;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
