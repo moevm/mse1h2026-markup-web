@@ -1,0 +1,19 @@
+.footer {
+  height: 65px;
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  border-top: 1px solid #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--main-bg-color);
+}
+
+.footer-text {
+  color: #64748B;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 12px;
+}

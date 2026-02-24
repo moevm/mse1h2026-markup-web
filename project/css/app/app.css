@@ -1,6 +1,7 @@
 #app {
   opacity: 1;
   transition: opacity 0.15s ease;
+  padding: 0 24px 85px 24px;
 }
 
 #app.out {
