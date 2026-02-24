@@ -52,3 +52,159 @@
   background-color: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
+
+.section-datasets-cards__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 50px;
+}
+
+.section-datasets-cards__card {
+  list-style: none;
+  width: 357px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(30, 41, 59, 1);
+}
+
+.section-datasets-cards__card-preview-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.section-datasets-cards__card-image {
+  overflow: hidden;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.section-datasets-cards__count-images-box {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background-color: rgba(15, 23, 42, 0.8);
+  padding: 4px 8px;
+}
+
+.section-datasets-cards__card-data {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.section-datasets-cards__card-title {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.section-datasets-cards__card-time {
+  font-size: 14px;
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.section-datasets-cards__card-status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-datasets-cards__card-text-status-box {
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-datasets-cards__card-progres-status-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.section-datasets-cards__card-progres-text {
+  color: #6567F1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.section-datasets-cards__card-text-percent {
+  color: #CBD5E1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.section-datasets-cards__card-input {
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  background: transparent;
+  height: 8px;
+  border-radius: 50px;
+}
+
+.section-datasets-cards__card-input::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(101, 103, 241, 0.2);
+}
+
+.section-datasets-cards__card-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 4px;
+  box-shadow: -999px 0 0 999px #6567F1;
+}
+
+.section-datasets-cards__card-fraction-text-status {
+  color: #94A3B8;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.section-datasets-cards__card-button {
+  width: 320px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background-color: #6567F1;
+  cursor: pointer;
+}
+
+.section-datasets-cards__card-progres-text {
+  color: #94A3B8;
+}
+
+.section-datasets-cards__card-input--complete::-webkit-slider-thumb {
+  box-shadow:-999px 0 0 999px #10B981;
+}
+
+.section-datasets-cards__card-input--check-status::-webkit-slider-thumb {
+  box-shadow:-999px 0 0 999px #F59E0B;
+}
+
+.section-datasets-cards__card-progres-text--complete {
+  color: #10B981;
+}
+
+.section-datasets-cards__card-progres-text--check-status {
+  color: #F59E0B;
+}
+
+.section-datasets-cards__card-button--complete {
+  background-color: #10B981;
+}
+
+.section-datasets-cards__card-button--check-status {
+  background-color: rgba(101, 103, 241, 0.1);
+}
