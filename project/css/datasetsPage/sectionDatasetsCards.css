@@ -1,0 +1,54 @@
+.section-datasets-cards {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-datasets-cards__navigation {
+  width: 100%;
+  margin-top: 32px;
+}
+
+.section-datasets-cards__menu {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.section-datasets-cards__menu-item {
+  list-style: none;
+}
+
+.section-datasets-cards__menu-button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #94A3B8;
+  background-color: #1E293B;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.section-datasets-cards__menu-button--active {
+  background-color: #6567F1;
+  color: #fff;
+}
+
+.section-datasets-cards__menu-counter {
+  display: block;
+  background-color: rgba(101, 103, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 50px;
+  text-align: center;
+  color: #6567F1;
+}
+
+.section-datasets-cards__menu-counter--light {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
