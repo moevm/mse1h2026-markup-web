@@ -1,0 +1,12 @@
+#app {
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+#app.out {
+  opacity: 0;
+}
+
+#app.in {
+  animation: fadeUp 0.2s ease both;
+}

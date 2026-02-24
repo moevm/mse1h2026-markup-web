@@ -1,0 +1,15 @@
+<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="30.000000" height="30.000000" fill="none" customFrame="url(#clipPath_2)">
+	<defs>
+		<clipPath id="clipPath_2">
+			<rect width="30.000000" height="30.000000" x="0.000000" y="0.000000" rx="8.000000" fill="rgb(255,255,255)" />
+		</clipPath>
+		<clipPath id="clipPath_3">
+			<rect width="18.000000" height="18.000000" x="6.000000" y="6.000000" fill="rgb(255,255,255)" />
+		</clipPath>
+	</defs>
+	<rect id="Background" width="30.000000" height="30.000000" x="0.000000" y="0.000000" rx="8.000000" fill="rgb(101,103,241)" />
+	<g id="Container" customFrame="url(#clipPath_3)">
+		<rect id="Container" width="18.000000" height="18.000000" x="6.000000" y="6.000000" />
+		<path id="Icon" d="M10 20L14 20L14 16L10 16L10 20ZM16 20L20 20L20 16L16 16L16 20ZM10 14L14 14L14 10L10 10L10 14ZM16 14L20 14L20 10L16 10L16 14ZM8 24C7.45 24 6.97917 23.8042 6.5875 23.4125C6.19583 23.0208 6 22.55 6 22L6 8C6 7.45 6.19583 6.97917 6.5875 6.5875C6.97917 6.19583 7.45 6 8 6L22 6C22.55 6 23.0208 6.19583 23.4125 6.5875C23.8042 6.97917 24 7.45 24 8L24 22C24 22.55 23.8042 23.0208 23.4125 23.4125C23.0208 23.8042 22.55 24 22 24L8 24ZM8 22L22 22L22 8L8 8L8 22ZM8 8L8 22L8 8Z" fill="rgb(255,255,255)" fill-rule="nonzero" />
+	</g>
+</svg>
