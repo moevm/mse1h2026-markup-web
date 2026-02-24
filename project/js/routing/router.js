@@ -1,7 +1,35 @@
 import { loadPageTime, routes } from "/js/routing/routerConfig.js";
 
-export function initRouter() {
+const injected = { styles: [], scripts: [] };
 
+function removeInjected() {
+  injected.styles.forEach(el => el.remove());
+  injected.scripts.forEach(el => el.remove());
+  injected.styles = [];
+  injected.scripts = [];
+}
+
+function injectStyles(styles = []) {
+  styles.forEach(href => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+    injected.styles.push(link);
+  });
+}
+
+function injectScripts(scripts = []) {
+  scripts.forEach(src => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    document.body.appendChild(script);
+    injected.scripts.push(script);
+  });
+}
+
+export function initRouter() {
   const app = document.getElementById('app');
   const navLinks = document.querySelectorAll('nav a');
 
@@ -12,7 +40,7 @@ export function initRouter() {
 
   async function render() {
     const path = getPath();
-    const file = routes[path];
+    const route = routes[path];
 
     navLinks.forEach(a => {
       const href = a.getAttribute('href').replace(/^#/, '') || '/';
@@ -22,7 +50,9 @@ export function initRouter() {
     app.classList.add('out');
     await new Promise(r => setTimeout(r, loadPageTime));
 
-    if (!file) {
+    removeInjected();
+
+    if (!route) {
       app.innerHTML = `
         <div class="not-found">
           <span>404</span>
@@ -31,13 +61,18 @@ export function initRouter() {
           <a href="#/" class="btn">← На главную</a>
         </div>`;
     } else {
-      const res = await fetch(file);
+      const res = await fetch(route.file);
       app.innerHTML = await res.text();
+
+      injectStyles(route.styles);
+      injectScripts(route.scripts);
     }
+
     app.classList.remove('out');
     app.classList.add('in');
     app.addEventListener('animationend', () => app.classList.remove('in'), { once: true });
   }
+
   window.addEventListener('hashchange', render);
   render();
 }
