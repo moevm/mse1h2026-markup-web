@@ -1,0 +1,24 @@
+
+<annotation>
+    <folder>images</folder>
+    <filename>BikesHelmets62.png</filename>
+    <size>
+        <width>364</width>
+        <height>480</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Without Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>161</xmin>
+            <ymin>23</ymin>
+            <xmax>216</xmax>
+            <ymax>89</ymax>
+        </bndbox>
+    </object>
+</annotation>

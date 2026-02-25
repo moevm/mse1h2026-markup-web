@@ -1,0 +1,50 @@
+
+<annotation>
+    <folder>images</folder>
+    <filename>BikesHelmets30.png</filename>
+    <size>
+        <width>267</width>
+        <height>400</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>94</xmin>
+            <ymin>62</ymin>
+            <xmax>152</xmax>
+            <ymax>130</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>24</xmin>
+            <ymin>159</ymin>
+            <xmax>70</xmax>
+            <ymax>210</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>132</xmin>
+            <ymin>101</ymin>
+            <xmax>180</xmax>
+            <ymax>156</ymax>
+        </bndbox>
+    </object>
+</annotation>

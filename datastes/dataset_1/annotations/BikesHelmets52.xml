@@ -1,0 +1,50 @@
+
+<annotation>
+    <folder>images</folder>
+    <filename>BikesHelmets52.png</filename>
+    <size>
+        <width>400</width>
+        <height>267</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>Without Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>150</xmin>
+            <ymin>21</ymin>
+            <xmax>186</xmax>
+            <ymax>59</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>Without Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>308</xmin>
+            <ymin>5</ymin>
+            <xmax>344</xmax>
+            <ymax>43</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>Without Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>39</xmin>
+            <ymin>16</ymin>
+            <xmax>76</xmax>
+            <ymax>52</ymax>
+        </bndbox>
+    </object>
+</annotation>

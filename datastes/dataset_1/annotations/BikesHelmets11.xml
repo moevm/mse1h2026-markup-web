@@ -1,0 +1,89 @@
+
+<annotation>
+    <folder>images</folder>
+    <filename>BikesHelmets11.png</filename>
+    <size>
+        <width>600</width>
+        <height>450</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>135</xmin>
+            <ymin>22</ymin>
+            <xmax>231</xmax>
+            <ymax>128</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>19</xmin>
+            <ymin>70</ymin>
+            <xmax>75</xmax>
+            <ymax>137</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>300</xmin>
+            <ymin>73</ymin>
+            <xmax>342</xmax>
+            <ymax>131</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>355</xmin>
+            <ymin>21</ymin>
+            <xmax>413</xmax>
+            <ymax>99</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>61</xmin>
+            <ymin>73</ymin>
+            <xmax>114</xmax>
+            <ymax>130</ymax>
+        </bndbox>
+    </object>
+    <object>
+        <name>With Helmet</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>561</xmin>
+            <ymin>47</ymin>
+            <xmax>600</xmax>
+            <ymax>95</ymax>
+        </bndbox>
+    </object>
+</annotation>

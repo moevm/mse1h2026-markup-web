@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+.venv/
+
+# Ultralytics / weights
+*.pt
+runs/
+datasets/
