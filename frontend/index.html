@@ -1,37 +1,35 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MSE_GUI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #0abab5;
-        }
-        .container {
-            background: black;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,1.1);
-        }
-        h1 {
-            color: #000;
-        }
-    </style>
-    <nav>
-    <h1 href="/">Главная</h1>
-    <h1 href="/settings">Настройки</h1>
-    <h1 href="/stats">Статистика</h1>
-    </nav>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App</title>
+  <link rel="stylesheet" href="/css/fonts/inter.css">
+  <link rel="stylesheet" href="/css/root.css">
+  <link rel="stylesheet" href="/css/minimize.css">
+  <link rel="stylesheet" href="/css/app/app.css">
+  <link rel="stylesheet" href="/css/animations.css">
+  <link rel="stylesheet" href="/css/header/header.css">
+  <link rel="stylesheet" href="/css/footer/footer.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Графический интерфейс</h1>
-    </div>
+  <header class="header">
+    <nav class="header__navigation">
+      <a class="header__link header__link--logo" href="#/">BestSoftWeb</a>
+      <a class="header__link" href="#/work">Рабочая область</a>
+      <a class="header__link" href="#/datasets">Датасеты</a>
+      <a class="header__link header__link--profile" href="#/stats"></a>
+    </nav>
+  </header>
+  <main id="app"></main>
+  <footer class="footer">
+    <p class="footer-text">
+      @Команда крутых перцев
+    </p>
+  </footer>
+  <div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="/js/index.js" defer></script>
 </body>
 </html>

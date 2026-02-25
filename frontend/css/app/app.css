@@ -1,0 +1,17 @@
+#app {
+  opacity: 1;
+  transition: opacity 0.15s ease;
+  width: 100%;
+  padding: 0 80px 85px 80px;
+  display: flex;  
+  flex-direction: column;
+  align-items: center;
+}
+
+#app.out {
+  opacity: 0;
+}
+
+#app.in {
+  animation: fadeUp 0.2s ease both;
+}

@@ -1,0 +1,80 @@
+<section class="section-stats-containers">
+  <ul class="section-stats-containers__list">
+    <li class="section-stats-containers__list-item">
+      <h2 class="section-stats-containers__list-title">Всего изображений</h2>
+      <h3 class="section-stats-containers__list-data">124,000</h3>
+      <input
+        class="section-stats-containers__list-input"
+        type="range"
+        disabled
+        value="100"
+        >
+    </li>
+    <li class="section-stats-containers__list-item">
+      <h2 class="section-stats-containers__list-title">Размечено</h2>
+      <h3 class="section-stats-containers__list-data">86,200</h3>
+      <input
+        class="section-stats-containers__list-input"
+        type="range"
+        disabled
+        value="69.5"
+        >
+    </li>
+    <li class="section-stats-containers__list-item">
+      <h2 class="section-stats-containers__list-title">Осталось</h2>
+      <h3 class="section-stats-containers__list-data">37,800</h3>
+      <input
+        class="section-stats-containers__list-input section-stats-containers__list-input--rest"
+        type="range"
+        disabled
+        value="30.5"
+        >
+    </li>
+    <li class="section-stats-containers__list-item">
+      <h2 class="section-stats-containers__list-title">Ср. уверенность</h2>
+      <h3 class="section-stats-containers__list-data">94.2%</h3>
+      <input
+        class="section-stats-containers__list-input section-stats-containers__list-input--avg"
+        type="range"
+        disabled
+        value="94.2"
+        >
+    </li>
+  </ul>
+</section>
+
+<section class="section-stats-graphs">
+  <div class="section-stats-graphs__average-graph-box">
+    <h3 class="section-stats-graphs__graph-title">
+      Средняя уверенность разметки
+    </h3>
+    <canvas id="averageMarkupPercentGraphCanvas"></canvas>
+  </div>
+  <div class="section-stats-graphs__donut-graph-box">
+      <h3 class="section-stats-graphs__graph-title">
+        Распределение классов
+      </h3>
+    <div class="section-stats-graphs__donut-data-place">
+      <div class="section-stats-graphs__count-classes-box">
+        <h4 class="section-stats-graphs__count-classes-text">2.4M</h4>
+        <h5 class="section-stats-graphs__count-classes-description">Объектов</h5>
+      </div>
+      <canvas id="donutGraphCanvas"></canvas>
+    </div>
+
+      <ul class="section-stats-graphs__list-classes">
+        <li class="section-stats-graphs__list-item section-stats-graphs__list-item--top">
+          <span class="section-stats-graphs__list-class-name">Машины</span>
+          <span class="section-stats-graphs__list-class-percent">65%</span>
+        </li>
+        <li class="section-stats-graphs__list-item section-stats-graphs__list-item--center">
+          <span class="section-stats-graphs__list-class-name">Пешеходы</span>
+          <span class="section-stats-graphs__list-class-percent">25%</span>
+        </li>
+        <li class="section-stats-graphs__list-item section-stats-graphs__list-item--bottom">
+          <span class="section-stats-graphs__list-class-name">Велосипедисты</span>
+          <span class="section-stats-graphs__list-class-percent">10%</span>
+        </li>
+      </ul>
+  </div>
+</section>

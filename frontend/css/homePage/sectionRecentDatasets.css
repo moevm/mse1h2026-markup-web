@@ -1,0 +1,147 @@
+.section-recent-datasets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 64px;
+  width: 100%;
+}
+
+.section-recent-datasets__header {
+  display: flex;
+  width: min(100%, 1200px);
+  justify-content: space-between;
+}
+
+.section-recent-datasets__title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-recent-datasets__title {
+  color: #F1F5F9;
+  font-weight: 700;
+}
+
+.section-recent-datasets__image-header {
+  width: 18px;
+  height: 18px;
+}
+
+.section-recent-datasets__button-show-all {
+  border: 0;
+  background: transparent;
+  color: #6567F1;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.section-recent-datasets__datasets-items {
+  display: flex;
+  align-items: center;
+  width: min(100%, 1200px);
+  margin-top: 24px;
+}
+
+.section-recent-datasets__datasets-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-recent-datasets__datasets-list-item {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  height: 85px;
+  padding: 17px;
+  border-radius: 12px;
+  background-color: rgba(101, 103, 241, 0.05);
+  border: 1px solid rgba(101, 103, 241, 0.1);
+  justify-content: space-between;
+}
+
+.section-recent-datasets__dataset-main-info {
+  display: flex;
+  gap: 16px;
+}
+
+.section-recent-datasets__image-dataset-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+
+.section-recent-datasets__dataset-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.section-recent-datasets__dataset-subdata {
+  display: flex;
+  gap: 10px;
+}
+
+.section-recent-datasets__dataset-subdata-text {
+  color: rgba(100, 116, 139, 1);
+  font-size: 14px;
+}
+
+.section-recent-datasets__dataset-subdata-text--time {
+  display: flex;
+  gap: 3px;
+}
+
+.section-recent-datasets__dataset-subdata-text--time::before {
+  content: '•';
+  display: block;
+  color: #64748B;
+}
+
+.section-recent-datasets__dataset-action-box {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.section-recent-datasets__input-status-markup {
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  background: transparent;
+  height: 8px;
+  border-radius: 50px;
+}
+
+.section-recent-datasets__input-status-markup::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(101, 103, 241, 0.2);
+}
+
+.section-recent-datasets__input-status-markup::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 4px;
+  box-shadow: -999px 0 0 999px #6567F1;
+}
+
+.section-recent-datasets__datasets-status-text {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.section-recent-datasets__button-goto {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.section-recent-datasets__image-goto {
+  height: 15px;
+}
