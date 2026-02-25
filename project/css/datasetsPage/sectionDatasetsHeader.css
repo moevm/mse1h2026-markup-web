@@ -1,8 +1,8 @@
 .section-datasets-header {
-  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: min(100%, 1200px);
 }
 
 .section-datasets-header__subtitle {

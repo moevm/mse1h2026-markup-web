@@ -3,6 +3,7 @@
   flex-direction: column;
   align-items: center;
   margin-top: 64px;
+  width: 100%;
 }
 
 .section-recent-datasets__header {
