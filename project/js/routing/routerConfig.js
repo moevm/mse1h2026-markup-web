@@ -25,7 +25,8 @@ export const routes = {
   '/stats':{
     file: 'pagesContent/stats.html',
     styles: [
-      '/css/statsPage/sectionStatsContainers.css'
+      '/css/statsPage/sectionStatsContainers.css',
+      '/css/statsPage/sectionStatsGraphs.css'
     ],
     scripts: [
       '/js/stats.js',

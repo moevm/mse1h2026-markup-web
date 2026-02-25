@@ -1,5 +1,5 @@
-function addGraph() {
-  const ctx = document.getElementById('myChart');
+function averageGraph() {
+  const ctx = document.getElementById('averageMarkupPercentGraphCanvas');
 
   new Chart(ctx, {
     type: 'line',
@@ -43,8 +43,7 @@ function addGraph() {
 }
 
 function donnut() {
-  const ctx = document.getElementById('doughnutChart').getContext('2d');
-
+  const ctx = document.getElementById('donutGraphCanvas').getContext('2d');
   new Chart(ctx, {
     type: 'doughnut',
     data: {
@@ -65,8 +64,8 @@ function donnut() {
   });
 }
 
-// addGraph();
 
-// donnut();
+averageGraph();
+donnut();
 
 
