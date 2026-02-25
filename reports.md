@@ -1,4 +1,4 @@
-# mse-template
+# mse-markup-web
 ## О проекте
 ### Постановка задачи
 [Постановка задачи](https://github.com/moevm/mse1h2026-markup-web/wiki#%D0%BF%D0%BE%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B8)
@@ -13,7 +13,7 @@
 - Открыть web-страницу по адресу http://127.0.0.1:8000/
 ## Итерация №1
 ### Презентация
-[Презентация итерация 1](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/%D0%B8%D1%82%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F_1.pdf)
+[Презентация итерация 1](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_1.pdf)
 ### Скринкасты
 [Скринкаст](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/screncast_iter_1.mp4)
 ### Запланированные задачи
