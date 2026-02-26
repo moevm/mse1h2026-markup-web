@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 import yaml
 import os
-
+import shutil
 
 class AutoAnnotator:
     '''модель'''
@@ -53,19 +53,18 @@ class AutoAnnotator:
                 height   = (ann["y2"] - ann["y1"]) / img_h
                 f.write(f"{ann['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
 
-    def train(self, dataset_name: str, epochs: int = 10):
+    def train(self, dataset_name: str, epochs: int = 10) -> str:
         '''дообучение модели на размеченных данных'''
 
-        #путь к датасету
         dataset_path = os.path.join("datasets", dataset_name)
 
-        # создание yaml конфига(под весь датасет)
+        # создание yaml конфига
         yaml_path = os.path.join(dataset_path, "dataset.yaml")
         yaml_data = {
             "path":  os.path.abspath(dataset_path),
             "train": "images/train",
             "val":   "images/train",
-            "nc":    len(self.model.names), #колличество классов
+            "nc":    len(self.model.names),
             "names": list(self.model.names.values()),
         }
         with open(yaml_path, "w") as f:
@@ -73,4 +72,22 @@ class AutoAnnotator:
 
         # запуск обучения
         self.model.train(data=yaml_path, epochs=epochs, imgsz=640)
+
+        # определяем следующую версию модели
+        models_dir = os.path.join(dataset_path, "models")
+        os.makedirs(models_dir, exist_ok=True)
+        existing = [f for f in os.listdir(models_dir) if f.startswith("model_v") and f.endswith(".pt")]
+        next_version = len(existing) + 1
+
+        # сохраняем лучшие веса с номером версии
+        trained_weights = os.path.join("runs", "detect", "train", "weights", "best.pt")
+        model_save_path = os.path.join(models_dir, f"model_v{next_version}.pt")
+
+        if os.path.exists(trained_weights):
+            shutil.copy(trained_weights, model_save_path)
+            self.model = YOLO(model_save_path)  # обновляем модель в памяти
+
+        return model_save_path, next_version  
+
+
 

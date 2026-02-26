@@ -1,6 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from annotator import AutoAnnotator
+from activate import Session
+from db import ModelVersion
 from typing import List
 from PIL import Image, UnidentifiedImageError
 import io
@@ -52,38 +55,77 @@ async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
     return {"dataset": dataset_name, "uploaded": saved}
 
 
-@router.post("/predict/{dataset_name}")
-async def predict(dataset_name: str, filenames: List[str]):
-    '''путь к файлам'''
-    images_dir = get_images_dir(dataset_name)
-    response = []
-    for filename in filenames:
-        image_path = os.path.join(images_dir, filename)
-        '''проверка на существование'''
-        if not os.path.exists(image_path):
-            raise HTTPException(status_code=404, detail=f"{filename} -  файл не найден в {dataset_name}")
-        '''предикты'''
-        annotations = annotator.predict(image_path)
-        response.append({"filename": filename, "annotations": annotations})
-    return response
-
-
 @router.post("/train/{dataset_name}")
-async def train(dataset_name: str, labeled_images: List[LabeledImage]):
-    '''сохранение меток и запуск обучения'''
-
-    # проверка что датасет существует
+async def train(dataset_name: str, filenames: List[str]):
+    '''дообучение на уже сохранённых метках'''
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
 
-    # сохранение txt меток для каждого файла
+    model_path, version = annotator.train(dataset_name)
+
+    with Session() as session:
+        model_record = ModelVersion(
+            dataset_id=1,  # TODO: заменить на реальный id из бд = заглушка
+            version=version,
+            path=model_path,
+            epochs=10,
+            is_active=True
+        )
+        session.add(model_record)
+        session.commit()
+
+    return {"status": "ok", "dataset": dataset_name}
+
+
+@router.post("/correct/{dataset_name}")
+async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
+    '''сохранение исправленных аннотаций + дообучение'''
+    images_dir = os.path.join("datasets", dataset_name, "images", "train")
+    if not os.path.exists(images_dir):
+        raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
+
     for item in labeled_images:
         image_path = os.path.join(images_dir, item.filename)
         if not os.path.exists(image_path):
             raise HTTPException(status_code=404, detail=f"{item.filename} не найден в {dataset_name}")
-        annotator.save_labels(dataset_name, item.filename, [ann.dict() for ann in item.annotations])
+        annotator.save_labels(dataset_name, item.filename, [ann.model_dump() for ann in item.annotations])
 
-    # запуск обучения
-    annotator.train(dataset_name)
-    return {"status": "ok", "dataset": dataset_name}
+    model_path, version = annotator.train(dataset_name)
+
+    with Session() as session:
+        model_record = ModelVersion(
+            dataset_id=1,  # TODO: заменить на реальный id из бд
+            version=version,
+            path=model_path,
+            epochs=10,
+            is_active=True
+        )
+        session.add(model_record)
+        session.commit()
+
+    return {"status": "ok", "dataset": dataset_name, "model_version": version}
+
+
+
+
+
+@router.get("/datasets/{dataset_name}/images")
+async def list_images(dataset_name: str):
+    images_dir = os.path.join("datasets", dataset_name, "images", "train") 
+    if not os.path.exists(images_dir):
+        raise HTTPException(status_code=404, detail="датасет не найден")
+    files = [f for f in os.listdir(images_dir)
+             if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    return {"dataset": dataset_name, "images": files}
+
+
+
+@router.get("/datasets/{dataset_name}/images/{filename}")
+async def get_image(dataset_name: str, filename: str):
+    '''отдать конкретное изображение'''
+    image_path = os.path.join(get_images_dir(dataset_name), filename)
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="файл не найден")
+    return FileResponse(image_path)
+
