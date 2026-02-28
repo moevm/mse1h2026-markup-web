@@ -61,7 +61,6 @@
       </div>
       <canvas id="donutGraphCanvas"></canvas>
     </div>
-
       <ul class="section-stats-graphs__list-classes">
         <li class="section-stats-graphs__list-item section-stats-graphs__list-item--top">
           <span class="section-stats-graphs__list-class-name">Машины</span>
@@ -77,4 +76,81 @@
         </li>
       </ul>
   </div>
+</section>
+
+<section class="section-stats-last-activity">
+  <div class="section-stats-last-activity__header">
+    <h3 class="section-stats-last-activity__title">Журнал последней активности</h3>
+    <button class="section-stats-last-activity__view-all">Просмотреть всю активность</button>
+  </div>
+  <div class="section-stats-last-activity__cols" aria-hidden="true">
+    <span class="section-stats-last-activity__col-label">ID датасета</span>
+    <span class="section-stats-last-activity__col-label">Маркапер</span>
+    <span class="section-stats-last-activity__col-label">Тип</span>
+    <span class="section-stats-last-activity__col-label">Изображения</span>
+    <span class="section-stats-last-activity__col-label">Уверенность</span>
+    <span class="section-stats-last-activity__col-label">Время</span>
+  </div>
+  <ul class="section-stats-last-activity__items">
+    <li class="section-stats-last-activity__item">
+      <button class="section-stats-last-activity__button" type="button">
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">#BT-9921</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
+          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--blue">B</span>
+          BestSoft
+        </span>
+        <span class="section-stats-last-activity__cell">
+          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--auto">Авто-разметка</span>
+        </span>
+        <span class="section-stats-last-activity__cell">1,200</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--confidence">96.8%</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">2 мин. назад</span>
+      </button>
+    </li>
+    <li class="section-stats-last-activity__item">
+      <button class="section-stats-last-activity__button" type="button">
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">#BT-9918</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
+          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--orange">A</span>
+          Admin
+        </span>
+        <span class="section-stats-last-activity__cell">
+          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--manual">Ручная проверка</span>
+        </span>
+        <span class="section-stats-last-activity__cell">450</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--na">N/A</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">14 мин. назад</span>
+      </button>
+    </li>
+    <li class="section-stats-last-activity__item">
+      <button class="section-stats-last-activity__button" type="button">
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">#BT-9915</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
+          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--blue">B</span>
+          BestSoft
+        </span>
+        <span class="section-stats-last-activity__cell">
+          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--auto">Авто-разметка</span>
+        </span>
+        <span class="section-stats-last-activity__cell">2,500</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--confidence">95.2%</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">1 час назад</span>
+      </button>
+    </li>
+    <li class="section-stats-last-activity__item">
+      <button class="section-stats-last-activity__button" type="button">
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">#BT-9912</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
+          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--orange">A</span>
+          Admin
+        </span>
+        <span class="section-stats-last-activity__cell">
+          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--manual">Ручная проверка</span>
+        </span>
+        <span class="section-stats-last-activity__cell">820</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--na">N/A</span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">3 часа назад</span>
+      </button>
+    </li>
+  </ul>
 </section>
