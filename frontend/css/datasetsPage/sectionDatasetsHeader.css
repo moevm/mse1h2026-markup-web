@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: min(100%, 1200px);
+  width: var(--section-width);
 }
 
 .section-datasets-header__subtitle {

@@ -1,5 +1,5 @@
 .section-datasets-cards {
-  width: min(100%, 1200px);
+  width: var(--section-width);
   display: flex;
   flex-direction: column;
 }

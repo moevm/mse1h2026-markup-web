@@ -1,6 +1,6 @@
 .section-stats-graphs {
   display: flex;
-  width: min(100%, 1200px);
+  width: var(--section-width);
   margin-top: 20px;
   justify-content: space-between;
   flex-wrap: wrap;

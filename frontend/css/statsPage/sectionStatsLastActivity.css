@@ -1,5 +1,5 @@
 .section-stats-last-activity {
-  width: min(100%, 1200px);
+  width: var(--section-width);
   background: #131b2e;
   border: 1px solid rgba(255, 255, 255, .07);
   border-radius: 16px;
