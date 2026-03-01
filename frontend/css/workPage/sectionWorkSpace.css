@@ -2,11 +2,14 @@
   --section-width: min(100%, 1600px);
   width: var(--section-width);
   height: calc(100vh - 180px);
-  margin-top: 20px;
   display: flex;
   align-items: stretch;
 }
 
 .section-workspace__main {
   width: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
 }

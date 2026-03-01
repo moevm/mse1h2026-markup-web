@@ -39,9 +39,72 @@
       </li>
     </ul>
   </aside>
+  
   <section class="section-workspace__main">
+    <div class="section-workspace__toolbar">
+      <div class="section-workspace__toolbar-image-actions">
+        <button class="section-workspace__tool-btn section-workspace__tool-btn--active" id="btn-select" title="S">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/hand-icon.svg" alt="">
+        </button>
+        <button class="section-workspace__tool-btn" id="btn-draw" title="D">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/goto-markup-icon.svg" alt="">
+        </button>
+        <button class="section-workspace__tool-btn section-workspace__tool-btn--danger" id="btn-delete-sel">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/delete-icon.svg" alt="">
+        </button>
+      </div>
+      <div class="section-workspace__toolbar-server-actions">
+        <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--recheck">
+          <img src="/img/svg/to-markup-icon.svg" alt="recheck-icon">
+          Подтвердить и отправить
+        </button>
+        <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--aproove">
+          <img src="/img/svg/aproove-icon.svg" alt="aproove-icon">
+          Апрув
+        </button>
+      </div>
+    </div>
 
+    <div class="detection-scene mode-select" id="scene">
+      <img id="scene-img"
+          src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=680&q=80"
+          alt="detection scene">
+      <div class="detection-layer" id="detection-layer"></div>
+    </div>
+
+    <div class="edit-popup" id="edit-popup">
+      <div>
+        <label>Метка</label>
+        <input type="text" id="pop-label" placeholder="Машина">
+      </div>
+      <div>
+        <label>Класс / цвет</label>
+        <select id="pop-class">
+          <option value="blue">синий</option>
+          <option value="yellow">жёлтый</option>
+          <option value="red">красный</option>
+          <option value="green">зелёный</option>
+          <option value="purple">фиолетовый</option>
+        </select>
+      </div>
+      <div>
+        <label>Уверенность (0–1)</label>
+        <input type="number" id="pop-conf" min="0" max="1" step="0.01">
+      </div>
+      <div>
+        <label>Позиция / размер (%)</label>
+        <div class="popup-row">
+          <input type="number" id="pop-x" placeholder="x" step="0.1">
+          <input type="number" id="pop-y" placeholder="y" step="0.1">
+          <input type="number" id="pop-w" placeholder="w" step="0.1">
+          <input type="number" id="pop-h" placeholder="h" step="0.1">
+        </div>
+      </div>
+      <button class="popup-close" id="pop-close">закрыть</button>
+    </div>
+    <div class="section-workspace__fast-actions-box"></div>
   </section>
+
   <aside class="section-workspace__aside section-workspace__aside--classes">
     <div class="section-workspace__property-box">
       <h3 class="section-workspace__title">СВОЙСТВА ОБЪЕКТА</h3>

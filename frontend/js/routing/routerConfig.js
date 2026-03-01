@@ -14,9 +14,12 @@ export const routes = {
     file: 'pagesContent/work.html',
     styles: [
       '/css/workPage/sectionWorkSpace.css',
-      '/css/workPage/sectionWorkSpaceAside.css'
+      '/css/workPage/sectionWorkSpaceAside.css',
+      '/css/workPage/sectionWorkSpaceMain.css'
     ],
-    scripts: []  
+    scripts: [
+      '/js/work.js'
+    ]  
   },
   '/datasets':{
     file: 'pagesContent/datasets.html',
@@ -32,7 +35,8 @@ export const routes = {
     styles: [
       '/css/statsPage/sectionStatsContainers.css',
       '/css/statsPage/sectionStatsGraphs.css',
-      '/css/statsPage/sectionStatsLastActivity.css'
+      '/css/statsPage/sectionStatsLastActivity.css',
+      '/css/statsPage/interactions.css'
     ],
     scripts: [
       '/js/stats.js',
