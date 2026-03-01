@@ -1,3 +1,5 @@
+export const loadPageTime = 200;
+
 export const routes = {
   '/':        {
     file: 'pagesContent/home.html',
@@ -10,7 +12,10 @@ export const routes = {
   },
   '/work':{
     file: 'pagesContent/work.html',
-    styles: [],
+    styles: [
+      '/css/workPage/sectionWorkSpace.css',
+      '/css/workPage/sectionWorkSpaceAside.css'
+    ],
     scripts: []  
   },
   '/datasets':{
@@ -27,13 +32,10 @@ export const routes = {
     styles: [
       '/css/statsPage/sectionStatsContainers.css',
       '/css/statsPage/sectionStatsGraphs.css',
-      '/css/statsPage/sectionStatsLastActivity.css',
-      '/css/statsPage/interactions.css'
+      '/css/statsPage/sectionStatsLastActivity.css'
     ],
     scripts: [
       '/js/stats.js',
     ]  
   },
 };
-
-export const loadPageTime = 200;
