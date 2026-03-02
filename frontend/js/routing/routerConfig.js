@@ -1,3 +1,5 @@
+export const loadPageTime = 200;
+
 export const routes = {
   '/':        {
     file: 'pagesContent/home.html',
@@ -10,8 +12,14 @@ export const routes = {
   },
   '/work':{
     file: 'pagesContent/work.html',
-    styles: [],
-    scripts: []  
+    styles: [
+      '/css/workPage/sectionWorkSpace.css',
+      '/css/workPage/sectionWorkSpaceAside.css',
+      '/css/workPage/sectionWorkSpaceMain.css'
+    ],
+    scripts: [
+      '/js/work.js'
+    ]  
   },
   '/datasets':{
     file: 'pagesContent/datasets.html',
@@ -35,5 +43,3 @@ export const routes = {
     ]  
   },
 };
-
-export const loadPageTime = 200;

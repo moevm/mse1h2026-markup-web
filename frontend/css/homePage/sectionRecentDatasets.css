@@ -8,7 +8,7 @@
 
 .section-recent-datasets__header {
   display: flex;
-  width: min(100%, 1200px);
+  width: var(--section-width);
   justify-content: space-between;
 }
 
@@ -40,7 +40,7 @@
 .section-recent-datasets__datasets-items {
   display: flex;
   align-items: center;
-  width: min(100%, 1200px);
+  width: var(--section-width);
   margin-top: 24px;
 }
 

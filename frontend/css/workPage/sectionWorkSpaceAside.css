@@ -1,0 +1,218 @@
+.section-workspace__aside {
+  width: 20%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.section-workspace__aside--images {
+  border-right: 1px solid #1E293B;
+  gap: 20px;
+  justify-content: center;
+}
+
+.section-workspace__images-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.section-workspace__images-block {
+  list-style: none;
+  width: 100%;
+}
+
+.section-workspace__image-preview {
+  width: 100%;
+}
+
+.section-workspace__images-button {
+  margin-top: 12px;
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  display: block;
+}
+
+.section-workspace__image-preview-box {
+  background-color: rgba(15, 23, 42, 1);
+  border: 1px solid #1E293B;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.section-workspace__image-title {
+  padding: 8px;
+  color: #64748B;
+  font-size: 14px;
+  text-align: left;
+}
+
+.section-workspace__images-title {
+  color: #64748B;
+  text-transform: uppercase;
+  font-size: 14px; 
+}
+
+.section-workspace__image-title--active {
+  color: #fff;
+}
+
+.section-workspace__aside--classes {
+  border-left: 1px solid #1E293B; 
+}
+
+.section-workspace__title {
+  color: #94A3B8;
+  letter-spacing: 0.6px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.section-workspace__select-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-workspace__select-title {
+  color: #94A3B8;
+  font-size: 14px;
+}
+
+.section-workspace__property-box {
+  width: 100%;
+  padding: 17px;
+  border-bottom: 1px solid #1E293B;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-workspace__select-input {
+  width: 100%;
+  height: 36px;
+  margin-top: 5px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 14px;
+  background: #1E293B url(/img/svg/down-arrow.svg) no-repeat right 10px center;  
+  -webkit-appearance: none;  
+  -moz-appearance: none;  
+  appearance: none;  
+  border: none;
+  outline: none;
+}
+
+.section-workspace__decision-box {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.section-workspace__decision-button {
+  width: 48%;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.section-workspace__decision-button--accept {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #22C55E;
+}
+
+.section-workspace__decision-button--reject {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+}
+
+.section-workspace__object-list-box {
+  width: 100% ;
+  padding: 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-workspace__object-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-workspace__object-item {
+  list-style: none;
+  width: 100%;
+  height: 67px;
+}
+
+.section-workspace__object-button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  background-color: rgba(101, 103, 241, 0.05);
+  border: 1px solid #1E293B;
+  cursor: pointer;
+  padding: 16px 20px;
+  color: #F1F5F9;
+  border-radius: 8px;
+}
+
+.section-workspace__object-button--selected {
+  border-left: 6px solid rgba(101, 103, 241, 1);
+}
+
+.section-workspace__object-main-data {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.section-workspace__object-title {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.section-workspace__object-sub-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.section-workspace__object-sub-data {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background-color: red;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.section-workspace__object-sub-data--high-percent {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: rgba(34, 197, 94, 1);
+}
+
+.section-workspace__object-sub-data--low-medium-percent {
+  background-color: rgba(249, 115, 22, 0.1);
+  color: rgba(249, 115, 22, 1);
+}

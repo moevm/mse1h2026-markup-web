@@ -1,1 +1,153 @@
-<h1>Рабочее пространство</h1>
+<section class="section-workspace">
+  <aside class="section-workspace__aside section-workspace__aside--images">
+    <ul class="section-workspace__images-list">
+      <li class="section-workspace__images-block">
+        <h3 class="section-workspace__images-title">
+          В ОЖИДАНИИ
+        </h3>
+        <button class="section-workspace__images-button">
+          <div class="section-workspace__image-preview-box">
+            <img class="section-workspace__image-preview" src="/img/mockImages/image-workspace-1.png"
+              alt="image-preview">
+            <h4 class="section-workspace__image-title section-workspace__image-title--active">Img_102.jpg</h4>
+          </div>
+        </button>
+      </li>
+      <li class="section-workspace__images-block">
+        <h3 class="section-workspace__images-title">
+          АВТО-РАЗМЕТКА (ТРЕБУЕТ ПРОВЕРКИ)
+        </h3>
+        <button class="section-workspace__images-button">
+          <div class="section-workspace__image-preview-box">
+            <img class="section-workspace__image-preview" src="/img/mockImages/image-workspace-2.png"
+              alt="image-preview">
+            <h4 class="section-workspace__image-title">Img_103.jpg</h4>
+          </div>
+        </button>
+      </li>
+      <li class="section-workspace__images-block">
+        <h3 class="section-workspace__images-title">
+          Размеченные (АПРУВ)
+        </h3>
+        <button class="section-workspace__images-button">
+          <div class="section-workspace__image-preview-box">
+            <img class="section-workspace__image-preview" src="/img/mockImages/image-workspace-3.png"
+              alt="image-preview">
+            <h4 class="section-workspace__image-title">Img_104.jpg</h4>
+          </div>
+        </button>
+      </li>
+    </ul>
+  </aside>
+  
+  <section class="section-workspace__main">
+    <div class="section-workspace__toolbar">
+      <div class="section-workspace__toolbar-image-actions">
+        <button class="section-workspace__tool-btn section-workspace__tool-btn--active" id="btn-select" title="S">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/hand-icon.svg" alt="">
+        </button>
+        <button class="section-workspace__tool-btn" id="btn-draw" title="D">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/goto-markup-icon.svg" alt="">
+        </button>
+        <button class="section-workspace__tool-btn section-workspace__tool-btn--danger" id="btn-delete-sel">
+          <img class="section-workspace__tool-btn-image" src="/img/svg/delete-icon.svg" alt="">
+        </button>
+      </div>
+      <div class="section-workspace__toolbar-server-actions">
+        <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--recheck">
+          <img src="/img/svg/to-markup-icon.svg" alt="recheck-icon">
+          Подтвердить и отправить
+        </button>
+        <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--aproove">
+          <img src="/img/svg/aproove-icon.svg" alt="aproove-icon">
+          Апрув
+        </button>
+      </div>
+    </div>
+
+    <div class="detection-scene mode-select" id="scene">
+      <img id="scene-img"
+          src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=680&q=80"
+          alt="detection scene">
+      <div class="detection-layer" id="detection-layer"></div>
+    </div>
+
+    <div class="edit-popup" id="edit-popup">
+      <div>
+        <label>Метка</label>
+        <input type="text" id="pop-label" placeholder="Машина">
+      </div>
+      <div>
+        <label>Класс / цвет</label>
+        <select id="pop-class">
+          <option value="blue">синий</option>
+          <option value="yellow">жёлтый</option>
+          <option value="red">красный</option>
+          <option value="green">зелёный</option>
+          <option value="purple">фиолетовый</option>
+        </select>
+      </div>
+      <div>
+        <label>Уверенность (0–1)</label>
+        <input type="number" id="pop-conf" min="0" max="1" step="0.01">
+      </div>
+      <div>
+        <label>Позиция / размер (%)</label>
+        <div class="popup-row">
+          <input type="number" id="pop-x" placeholder="x" step="0.1">
+          <input type="number" id="pop-y" placeholder="y" step="0.1">
+          <input type="number" id="pop-w" placeholder="w" step="0.1">
+          <input type="number" id="pop-h" placeholder="h" step="0.1">
+        </div>
+      </div>
+      <button class="popup-close" id="pop-close">закрыть</button>
+    </div>
+    <div class="section-workspace__fast-actions-box"></div>
+  </section>
+
+  <aside class="section-workspace__aside section-workspace__aside--classes">
+    <div class="section-workspace__property-box">
+      <h3 class="section-workspace__title">СВОЙСТВА ОБЪЕКТА</h3>
+      <div class="section-workspace__select-box">
+        <label class="section-workspace__select-title" for="class-select">Класс</label>
+        <select class="section-workspace__select-input" id="class-select" name="class-select">
+          <option value="1">Машина</option>
+          <option value="2">Человек</option>
+        </select>
+      </div>
+      <div class="section-workspace__decision-box">
+        <button class="section-workspace__decision-button section-workspace__decision-button--accept">
+          <img src="/img/svg/accept-icon.svg" alt="accept-icon">
+          Принять
+        </button>
+        <button class="section-workspace__decision-button section-workspace__decision-button--reject">
+          <img class="section-workspace__button-image" src="/img/svg/reject-icon.svg" alt="reject-icon">
+          Отклонить
+        </button>
+      </div>
+    </div>
+    <div class="section-workspace__object-list-box">
+      <h3 class="section-workspace__title">СПИСОК ОБЪЕКТОВ</h3>
+      <ul class="section-workspace__object-list">
+        <li class="section-workspace__object-item">
+          <button class="section-workspace__object-button section-workspace__object-button--selected">
+            <div class="section-workspace__object-main-data">
+              <h4 class="section-workspace__object-title">Машина #1</h4>
+              <h5 class="section-workspace__object-sub-title">ID: veh_8291</h5>
+            </div>
+            <div class="section-workspace__object-sub-data section-workspace__object-sub-data--high-percent">98%</div>
+          </button>
+        </li>
+        <li class="section-workspace__object-item">
+          <button class="section-workspace__object-button">
+            <div class="section-workspace__object-main-data">
+              <h4 class="section-workspace__object-title">Человек #1</h4>
+              <h5 class="section-workspace__object-sub-title">ID: ped_0122</h5>
+            </div>
+            <div class="section-workspace__object-sub-data section-workspace__object-sub-data--low-medium-percent">45%</div>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </aside>
+</section>

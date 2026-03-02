@@ -1,6 +1,6 @@
 .section-stats-containers {
   display: flex;
-  width: min(100%, 1200px);
+  width: var(--section-width);
   margin-top: 80px;
 }
 

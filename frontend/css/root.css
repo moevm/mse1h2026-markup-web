@@ -2,4 +2,5 @@
   font-family: 'Inter', sans-serif;
   --main-color: #fff;
   --main-bg-color: #111122;
+  --section-width: min(100%, 1280px);
 }
