@@ -86,31 +86,31 @@ const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 function createBboxEl(d) {
   const box = document.createElement("div");
-  box.className = "bbox";
+  box.className = "section-workspace__bbox";
   box.dataset.id = d.id;
   box.dataset.class = d.cls;
 
   box.innerHTML = `
-    <div class="bbox__border"></div>
-    <div class="bbox__label"></div>
-    <div class="bbox__conf-bar"></div>
-    ${HANDLES.map((dir) => `<div class="bbox__handle" data-dir="${dir}"></div>`).join("")}
-    <button class="bbox__delete" title="Удалить">✕</button>
+    <div class="section-workspace__bbox-border"></div>
+    <div class="section-workspace__bbox-label"></div>
+    <div class="section-workspace__bbox-conf-bar"></div>
+    ${HANDLES.map((dir) => `<div class="section-workspace__bbox-handle" data-dir="${dir}"></div>`).join("")}
+    <button class="section-workspace__bbox-delete" title="Удалить">✕</button>
   `;
 
-  box.querySelector(".bbox__border").addEventListener("mousedown", (e) => {
+  box.querySelector(".section-workspace__bbox-border").addEventListener("mousedown", (e) => {
     if (mode !== "select") return;
     e.stopPropagation();
     selectBbox(d.id);
     startMove(e, d.id);
   });
 
-  box.querySelector(".bbox__border").addEventListener("dblclick", (e) => {
+  box.querySelector(".section-workspace__bbox-border").addEventListener("dblclick", (e) => {
     e.stopPropagation();
     openPopup(d.id, e.clientX, e.clientY);
   });
 
-  box.querySelectorAll(".bbox__handle").forEach((h) => {
+  box.querySelectorAll(".section-workspace__bbox-handle").forEach((h) => {
     h.addEventListener("mousedown", (e) => {
       if (mode !== "select") return;
       e.stopPropagation();
@@ -119,7 +119,7 @@ function createBboxEl(d) {
     });
   });
 
-  box.querySelector(".bbox__delete").addEventListener("click", (e) => {
+  box.querySelector(".section-workspace__bbox-delete").addEventListener("click", (e) => {
     e.stopPropagation();
     deleteBbox(d.id);
   });
@@ -147,9 +147,9 @@ function refreshBbox(id) {
     height: d.h + "%",
   });
 
-  el.querySelector(".bbox__label").textContent =
+  el.querySelector(".section-workspace__bbox-label").textContent =
     `${d.label}: ${Math.round(d.conf * 100)}%`;
-  el.querySelector(".bbox__conf-bar").style.width = d.conf * 100 + "%";
+  el.querySelector(".section-workspace__bbox-conf-bar").style.width = d.conf * 100 + "%";
 }
 
 function renderAll() {
@@ -164,15 +164,15 @@ function selectBbox(id) {
   if (selectedId === id) return;
   deselectAll();
   selectedId = id;
-  layer.querySelector(`[data-id="${id}"]`)?.classList.add("selected");
+  layer.querySelector(`[data-id="${id}"]`)?.classList.add("section-workspace__bbox--selected");
   const d = getDetection(id);
 }
 
 function deselectAll() {
   selectedId = null;
   layer
-    .querySelectorAll(".bbox.selected")
-    .forEach((el) => el.classList.remove("selected"));
+    .querySelectorAll(".section-workspace__bbox--selected")
+    .forEach((el) => el.classList.remove("section-workspace__bbox--selected"));
   closePopup();
 }
 
@@ -226,7 +226,7 @@ scene.addEventListener("mousedown", (e) => {
   if (mode === "draw") {
     const { px, py } = getRelPos(e);
     ghost = document.createElement("div");
-    ghost.className = "draw-ghost";
+    ghost.className = "section-workspace__draw-ghost";
     ghost.style.left = toPercent(px, "x") + "%";
     ghost.style.top = toPercent(py, "y") + "%";
     ghost.style.width = "0";
@@ -343,7 +343,7 @@ document.addEventListener("keydown", (e) => {
 
 function setMode(m) {
   mode = m;
-  scene.className = `detection-scene mode-${m}`;
+  scene.className = `section-workspace__detection-scene .section-workspace__detection-scene--mode-${m}`;
   btnSelect.classList.toggle("section-workspace__tool-btn--active", m === "select");
   btnDraw.classList.toggle("section-workspace__tool-btn--active", m === "draw");
 }
@@ -355,7 +355,7 @@ function openPopup(id, cx, cy) {
   const d = getDetection(id);
   if (!d) return;
   syncPopup(d);
-  popup.classList.add("open");
+  popup.classList.add("section-workspace__edit-popup--open");
 
   const pw = 220,
   ph = 200;
@@ -392,7 +392,7 @@ function syncPopup(d) {
 }
 
 function closePopup() {
-  popup.classList.remove("open");
+  popup.classList.remove("section-workspace__edit-popup--open");
 }
 
 document.getElementById("pop-close").addEventListener("click", closePopup);

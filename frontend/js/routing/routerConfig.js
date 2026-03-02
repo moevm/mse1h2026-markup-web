@@ -15,7 +15,8 @@ export const routes = {
     styles: [
       '/css/workPage/sectionWorkSpace.css',
       '/css/workPage/sectionWorkSpaceAside.css',
-      '/css/workPage/sectionWorkSpaceMain.css'
+      '/css/workPage/sectionWorkSpaceMain.css',
+      '/css/workPage/interactions.css'
     ],
     scripts: [
       '/js/work.js'

@@ -1,0 +1,23 @@
+.section-workspace__tool-btn:hover {
+  background: rgba(255, 255, 255, .11);
+  border-color: rgba(255, 255, 255, .3);
+  color: #fff;
+}
+
+.section-workspace__tool-btn--danger:hover {
+  background: rgba(255, 91, 91, .18);
+  border-color: #ff5b5b;
+  color: #fff;
+}
+
+.section-workspace__edit-popup-input:focus {
+  border-color: #5b7fff;
+}
+
+.section-workspace__edit-popup-select:focus {
+  border-color: #5b7fff;
+}
+
+.section-workspace__popup-close:hover {
+  color: #fff;
+}
