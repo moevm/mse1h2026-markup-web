@@ -20,10 +20,21 @@ function injectStyles(styles = []) {
 }
 
 function injectScripts(scripts = []) {
-  scripts.forEach(src => {
+  scripts.forEach(item => {
     const script = document.createElement('script');
-    script.src = src;
-    script.defer = true;
+    
+    if (typeof item === 'string') {
+      script.src = item;
+      script.defer = true;
+    } else {
+      script.src = item.src;
+      if (item.module) {
+        script.type = 'module';
+      } else {
+        script.defer = true;
+      }
+    }
+
     document.body.appendChild(script);
     injected.scripts.push(script);
   });

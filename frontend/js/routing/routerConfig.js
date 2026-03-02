@@ -19,7 +19,7 @@ export const routes = {
       '/css/workPage/interactions.css'
     ],
     scripts: [
-      '/js/work.js'
+      { src: '/js/work/work.js', module: false }
     ]  
   },
   '/datasets':{
@@ -40,7 +40,7 @@ export const routes = {
       '/css/statsPage/interactions.css'
     ],
     scripts: [
-      '/js/stats.js',
+      { src: '/js/stats.js', module: false },
     ]  
   },
 };
