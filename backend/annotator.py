@@ -70,8 +70,8 @@ class AutoAnnotator:
         with open(yaml_path, "w") as f:
             yaml.dump(yaml_data, f)
 
-        # запуск обучения
-        self.model.train(data=yaml_path, epochs=epochs, imgsz=640)
+        # запуск обучения - results содержит путь к весам
+        results = self.model.train(data=yaml_path, epochs=epochs, imgsz=640)
 
         # определяем следующую версию модели
         models_dir = os.path.join(dataset_path, "models")
@@ -79,13 +79,13 @@ class AutoAnnotator:
         existing = [f for f in os.listdir(models_dir) if f.startswith("model_v") and f.endswith(".pt")]
         next_version = len(existing) + 1
 
-        # сохраняем лучшие веса с номером версии
-        trained_weights = os.path.join("runs", "detect", "train", "weights", "best.pt")
+        # берём путь к лучшим весам из результатов обучения
+        trained_weights = os.path.join(results.save_dir, "weights", "best.pt")
         model_save_path = os.path.join(models_dir, f"model_v{next_version}.pt")
 
         if os.path.exists(trained_weights):
             shutil.copy(trained_weights, model_save_path)
-            self.model = YOLO(model_save_path)  # обновляем модель в памяти
+            self.model = YOLO(model_save_path)
 
         return model_save_path, next_version  
 
