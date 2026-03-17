@@ -1,16 +1,17 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from annotator import AutoAnnotator
 from activate import Session
-from db import ModelVersion
+from helper import get_annotator, invalidate_annotator
 from typing import List
+import json
 from PIL import Image, UnidentifiedImageError
+from db import Dataset, ModelVersion, TrainingConfig
 import io
 import os
 
+
 router = APIRouter()
-annotator = AutoAnnotator()
 
 
 # модели запроса
@@ -27,20 +28,86 @@ class LabeledImage(BaseModel):
 
 
 def get_images_dir(dataset_name: str) -> str:
-    '''функция - создание директорий под датасеты'''
+    '''создание директорий под датасеты'''
     path = os.path.join("datasets", dataset_name, "images", "train")
     os.makedirs(path, exist_ok=True)
     return path
 
 
+def get_dataset_by_name(dataset_name: str) -> Dataset:
+    '''находим датасет в бд по имени, кидаем 404 если не найден'''
+    with Session() as session:
+        dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
+        if not dataset:
+            raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
+        # чтобы объект жил за пределами сессии запоминаем нужные поля
+        session.expunge(dataset)
+        return dataset
+
+
+def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str, int]:
+    '''общий блок: достаём гиперпараметры, обучаем, считаем метрики, сохраняем версию'''
+
+    # достаём гиперпараметры из бд
+    with Session() as session:
+        config = session.query(TrainingConfig).filter(
+            TrainingConfig.dataset_id == dataset.id
+        ).first()
+
+    if config:
+        model_path, version = annotator.train(
+            dataset_name,
+            epochs=config.epochs,
+            learning_rate=config.learning_rate,
+            batch_size=config.batch_size,
+            imgsz=config.imgsz,
+            optimizer=config.optimizer
+        )
+        used_epochs = config.epochs
+    else:
+        model_path, version = annotator.train(dataset_name)
+        used_epochs = 10
+
+    # валидация —> считаем метрики
+    metrics = annotator.evaluate(dataset_name)
+
+    with Session() as session:
+        # деактивируем старые версии для этого датасета
+        session.query(ModelVersion).filter(
+            ModelVersion.dataset_id == dataset.id,
+            ModelVersion.is_active == True
+        ).update({"is_active": False})
+
+        model_record = ModelVersion(
+            dataset_id=dataset.id,
+            version=version,
+            path=model_path,
+            epochs=used_epochs,
+            is_active=True,
+            architecture=dataset.current_model_architecture,
+            precision=metrics["precision"],
+            recall=metrics["recall"],
+            f1=metrics["f1"],
+            map50=metrics["map50"],
+            map50_95=metrics["map50_95"],
+            mean_iou=metrics["mean_iou"],
+            confusion_matrix_json=json.dumps(metrics["confusion_matrix"])
+        )
+        session.add(model_record)
+        session.commit()
+
+    invalidate_annotator(dataset.id)
+    return model_path, version
+
+
 @router.post("/upload/{dataset_name}")
 async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
     '''загрузка конкретного набора файлов'''
+    get_dataset_by_name(dataset_name)
     images_dir = get_images_dir(dataset_name)
     saved = []
-    '''итерация по файлам'''
+
     for file in files:
-        '''считывание'''
         contents = await file.read()
         '''проверка на корректность данных'''
         try:
@@ -50,40 +117,40 @@ async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
         save_path = os.path.join(images_dir, file.filename)
         with open(save_path, "wb") as f:
             f.write(contents)
-        '''сохранение'''
         saved.append({"filename": file.filename, "path": save_path})
+
     return {"dataset": dataset_name, "uploaded": saved}
 
 
 @router.post("/train/{dataset_name}")
-async def train(dataset_name: str, filenames: List[str]):
+async def train(dataset_name: str):
     '''дообучение на уже сохранённых метках'''
+    dataset = get_dataset_by_name(dataset_name)
+
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
     if not os.path.exists(images_dir):
-        raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
+        raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
 
-    model_path, version = annotator.train(dataset_name)
+    annotator = get_annotator(dataset.id)
+    if not annotator:
+        raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
-    with Session() as session:
-        model_record = ModelVersion(
-            dataset_id=1,  # TODO: заменить на реальный id из бд = заглушка
-            version=version,
-            path=model_path,
-            epochs=10,
-            is_active=True
-        )
-        session.add(model_record)
-        session.commit()
-
-    return {"status": "ok", "dataset": dataset_name}
+    _, version = _train_and_save(dataset, dataset_name, annotator)
+    return {"status": "ok", "dataset": dataset_name, "model_version": version}
 
 
 @router.post("/correct/{dataset_name}")
 async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
     '''сохранение исправленных аннотаций + дообучение'''
+    dataset = get_dataset_by_name(dataset_name)
+
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
     if not os.path.exists(images_dir):
-        raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
+        raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
+
+    annotator = get_annotator(dataset.id)
+    if not annotator:
+        raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
     for item in labeled_images:
         image_path = os.path.join(images_dir, item.filename)
@@ -91,28 +158,14 @@ async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
             raise HTTPException(status_code=404, detail=f"{item.filename} не найден в {dataset_name}")
         annotator.save_labels(dataset_name, item.filename, [ann.model_dump() for ann in item.annotations])
 
-    model_path, version = annotator.train(dataset_name)
-
-    with Session() as session:
-        model_record = ModelVersion(
-            dataset_id=1,  # TODO: заменить на реальный id из бд
-            version=version,
-            path=model_path,
-            epochs=10,
-            is_active=True
-        )
-        session.add(model_record)
-        session.commit()
-
+    _, version = _train_and_save(dataset, dataset_name, annotator)
     return {"status": "ok", "dataset": dataset_name, "model_version": version}
-
-
-
 
 
 @router.get("/datasets/{dataset_name}/images")
 async def list_images(dataset_name: str):
-    images_dir = os.path.join("datasets", dataset_name, "images", "train") 
+    '''список изображений датасета'''
+    images_dir = os.path.join("datasets", dataset_name, "images", "train")
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail="датасет не найден")
     files = [f for f in os.listdir(images_dir)
@@ -120,12 +173,12 @@ async def list_images(dataset_name: str):
     return {"dataset": dataset_name, "images": files}
 
 
-
 @router.get("/datasets/{dataset_name}/images/{filename}")
 async def get_image(dataset_name: str, filename: str):
     '''отдать конкретное изображение'''
-    image_path = os.path.join(get_images_dir(dataset_name), filename)
+    image_path = os.path.join("datasets", dataset_name, "images", "train", filename)
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="файл не найден")
     return FileResponse(image_path)
+
 
