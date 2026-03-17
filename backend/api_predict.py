@@ -3,9 +3,10 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from activate import Session
 from helper import get_annotator, invalidate_annotator
-from db import Dataset, ModelVersion
 from typing import List
+import json
 from PIL import Image, UnidentifiedImageError
+from db import Dataset, ModelVersion, TrainingConfig
 import io
 import os
 
@@ -44,9 +45,65 @@ def get_dataset_by_name(dataset_name: str) -> Dataset:
         return dataset
 
 
+def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str, int]:
+    '''общий блок: достаём гиперпараметры, обучаем, считаем метрики, сохраняем версию'''
+
+    # достаём гиперпараметры из бд
+    with Session() as session:
+        config = session.query(TrainingConfig).filter(
+            TrainingConfig.dataset_id == dataset.id
+        ).first()
+
+    if config:
+        model_path, version = annotator.train(
+            dataset_name,
+            epochs=config.epochs,
+            learning_rate=config.learning_rate,
+            batch_size=config.batch_size,
+            imgsz=config.imgsz,
+            optimizer=config.optimizer
+        )
+        used_epochs = config.epochs
+    else:
+        model_path, version = annotator.train(dataset_name)
+        used_epochs = 10
+
+    # валидация —> считаем метрики
+    metrics = annotator.evaluate(dataset_name)
+
+    with Session() as session:
+        # деактивируем старые версии для этого датасета
+        session.query(ModelVersion).filter(
+            ModelVersion.dataset_id == dataset.id,
+            ModelVersion.is_active == True
+        ).update({"is_active": False})
+
+        model_record = ModelVersion(
+            dataset_id=dataset.id,
+            version=version,
+            path=model_path,
+            epochs=used_epochs,
+            is_active=True,
+            architecture=dataset.current_model_architecture,
+            precision=metrics["precision"],
+            recall=metrics["recall"],
+            f1=metrics["f1"],
+            map50=metrics["map50"],
+            map50_95=metrics["map50_95"],
+            mean_iou=metrics["mean_iou"],
+            confusion_matrix_json=json.dumps(metrics["confusion_matrix"])
+        )
+        session.add(model_record)
+        session.commit()
+
+    invalidate_annotator(dataset.id)
+    return model_path, version
+
+
 @router.post("/upload/{dataset_name}")
 async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
     '''загрузка конкретного набора файлов'''
+    get_dataset_by_name(dataset_name)
     images_dir = get_images_dir(dataset_name)
     saved = []
 
@@ -74,29 +131,11 @@ async def train(dataset_name: str):
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
 
-    # получаем annotator для этого датасета
     annotator = get_annotator(dataset.id)
     if not annotator:
         raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
-    model_path, version = annotator.train(dataset_name)
-
-    # сохраняем версию модели с реальным dataset_id
-    with Session() as session:
-        model_record = ModelVersion(
-            dataset_id=dataset.id,
-            version=version,
-            path=model_path,
-            epochs=10,
-            is_active=True,
-            architecture=dataset.current_model_architecture
-        )
-        session.add(model_record)
-        session.commit()
-
-    # сбрасываем кеш чтобы следующий predict взял новые веса
-    invalidate_annotator(dataset.id)
-
+    _, version = _train_and_save(dataset, dataset_name, annotator)
     return {"status": "ok", "dataset": dataset_name, "model_version": version}
 
 
@@ -109,37 +148,17 @@ async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
 
-    # получаем annotator для этого датасета
     annotator = get_annotator(dataset.id)
     if not annotator:
         raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
-    # сохраняем исправленные лейблы
     for item in labeled_images:
         image_path = os.path.join(images_dir, item.filename)
         if not os.path.exists(image_path):
             raise HTTPException(status_code=404, detail=f"{item.filename} не найден в {dataset_name}")
         annotator.save_labels(dataset_name, item.filename, [ann.model_dump() for ann in item.annotations])
 
-    # дообучение
-    model_path, version = annotator.train(dataset_name)
-
-    # сохраняем версию модели с реальным dataset_id
-    with Session() as session:
-        model_record = ModelVersion(
-            dataset_id=dataset.id,
-            version=version,
-            path=model_path,
-            epochs=10,
-            is_active=True,
-            architecture=dataset.current_model_architecture
-        )
-        session.add(model_record)
-        session.commit()
-
-    # сбрасываем кеш
-    invalidate_annotator(dataset.id)
-
+    _, version = _train_and_save(dataset, dataset_name, annotator)
     return {"status": "ok", "dataset": dataset_name, "model_version": version}
 
 
@@ -157,7 +176,9 @@ async def list_images(dataset_name: str):
 @router.get("/datasets/{dataset_name}/images/{filename}")
 async def get_image(dataset_name: str, filename: str):
     '''отдать конкретное изображение'''
-    image_path = os.path.join(get_images_dir(dataset_name), filename)
+    image_path = os.path.join("datasets", dataset_name, "images", "train", filename)
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="файл не найден")
     return FileResponse(image_path)
+
+

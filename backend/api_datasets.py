@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from activate import Session
-from db import Dataset, DatasetStatus
+from db import Base, Dataset, DatasetStatus, TrainingConfig
 from model_registry import get_all_models, get_model_by_id
 from helper import invalidate_annotator
 import os
+from typing import Optional
 
 router = APIRouter()
 
@@ -16,6 +17,14 @@ class AddDatasetRequest(BaseModel):
 
 class ChangeModelRequest(BaseModel):
     architecture: str
+
+
+class TrainingConfigRequest(BaseModel):
+    epochs: Optional[int] = None
+    batch_size: Optional[int] = None
+    learning_rate: Optional[float] = None
+    imgsz: Optional[int] = None
+    optimizer: Optional[str] = None
 
 
 @router.get("/api/getDatasets")
@@ -121,3 +130,53 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
     invalidate_annotator(dataset_id)
 
     return {"status": "ok", "architecture": body.architecture}
+
+
+
+@router.get("/api/datasets/{dataset_id}/hyperparams")
+async def get_hyperparams(dataset_id: int):
+    '''гиперпараметры для текущей модели датасета'''
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        config = session.query(TrainingConfig).filter(TrainingConfig.dataset_id == dataset_id).first()
+        if not config:
+            config = TrainingConfig(dataset_id=dataset_id)
+            session.add(config)
+            session.commit()
+            session.refresh(config)
+        return {
+            "epochs": config.epochs,
+            "batch_size": config.batch_size,
+            "learning_rate": config.learning_rate,
+            "imgsz": config.imgsz,
+            "optimizer": config.optimizer
+        }
+        
+
+@router.put("/api/datasets/{dataset_id}/hyperparams")
+async def update_hyperparams(dataset_id: int, body: TrainingConfigRequest):
+    '''обновить гиперпараметры для текущей модели датасета'''
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        config = session.query(TrainingConfig).filter(TrainingConfig.dataset_id == dataset_id).first()
+        if not config:
+            config = TrainingConfig(dataset_id=dataset_id)
+            session.add(config)
+        
+        if body.epochs is not None:
+            config.epochs = body.epochs
+        if body.batch_size is not None:
+            config.batch_size = body.batch_size
+        if body.learning_rate is not None:
+            config.learning_rate = body.learning_rate
+        if body.imgsz is not None:
+            config.imgsz = body.imgsz
+        if body.optimizer is not None:
+            config.optimizer = body.optimizer
+
+        session.commit()
+        return {"status": "ok"}
