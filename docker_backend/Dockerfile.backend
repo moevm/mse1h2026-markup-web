@@ -1,0 +1,43 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+# Удаляем annotated-doc — его нет на PyPI, и добавляем недостающие пакеты
+RUN grep -v "annotated-doc" requirements.txt > requirements_fixed.txt && \
+    pip install --no-cache-dir --timeout=300 --retries 10 \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    -r requirements_fixed.txt && \
+    pip install --no-cache-dir --timeout=300 --retries 10 \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    python-dotenv psycopg2-binary sqlalchemy
+
+COPY backend/ .
+COPY docker_backend/main_backend.py .
+
+RUN mkdir -p datasets
+
+EXPOSE 8000
+
+CMD ["sh", "-c", "\
+    echo 'Ожидание PostgreSQL...' && \
+    until python -c \"import psycopg2, os; psycopg2.connect(host=os.getenv('DB_HOST'), port=os.getenv('DB_PORT'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), dbname=os.getenv('DB_NAME'))\" 2>/dev/null; do \
+        echo 'PostgreSQL недоступен, ждём...' && sleep 2; \
+    done && \
+    echo 'Создаём таблицы...' && \
+    python -c 'from activate import create_db_tables; create_db_tables()' && \
+    echo 'Запускаем бэкенд...' && \
+    uvicorn main_backend:app --host 0.0.0.0 --port 8000"]
