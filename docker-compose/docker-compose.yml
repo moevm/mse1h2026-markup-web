@@ -28,8 +28,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ..
+      dockerfile: docker_backend/Dockerfile.backend
     restart: unless-stopped
     environment:
       DB_USER: ${DB_USER:-postgres}
@@ -45,8 +45,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ..
+      dockerfile: docker_frontend/Dockerfile.frontend
     restart: unless-stopped
     ports:
       - "80:80"
