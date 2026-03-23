@@ -14,21 +14,29 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --timeout=300 --retries 10 \
+    --index-url http://pypi.org/simple \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
     -r requirements.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
+    --index-url http://pypi.org/simple \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
     python-dotenv psycopg2-binary
 
 COPY backend/ .
 COPY docker_backend/main_backend.py .
-COPY docker_backend/entrypoint.sh .
-RUN chmod +x entrypoint.sh
 
 RUN mkdir -p datasets
 
 EXPOSE 8000
 
-CMD ["/app/entrypoint.sh"]
+CMD ["sh", "-c", "\
+    echo 'Ожидание PostgreSQL...' && \
+    until python -c \"import psycopg2, os; psycopg2.connect(host=os.getenv('DB_HOST'), port=os.getenv('DB_PORT'), user=os.getenv('DB_USER'), password=os.getenv('DB_PASSWORD'), dbname=os.getenv('DB_NAME'))\" 2>/dev/null; do \
+        echo 'PostgreSQL недоступен, ждём...' && sleep 2; \
+    done && \
+    echo 'Создаём таблицы...' && \
+    python -c 'from activate import create_db_tables; create_db_tables()' && \
+    echo 'Запускаем бэкенд...' && \
+    uvicorn main_backend:app --host 0.0.0.0 --port 8000"]
