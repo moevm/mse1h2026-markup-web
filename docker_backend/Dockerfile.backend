@@ -13,13 +13,14 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --timeout=300 --retries 10 \
-    --index-url http://pypi.org/simple \
+
+# Удаляем annotated-doc из requirements — его нет на PyPI
+RUN grep -v "annotated-doc" requirements.txt > requirements_fixed.txt && \
+    pip install --no-cache-dir --timeout=300 --retries 10 \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
-    -r requirements.txt && \
+    -r requirements_fixed.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
-    --index-url http://pypi.org/simple \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
     python-dotenv psycopg2-binary
