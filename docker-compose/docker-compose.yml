@@ -31,6 +31,8 @@ services:
       context: ..
       dockerfile: docker_backend/Dockerfile.backend
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     environment:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
