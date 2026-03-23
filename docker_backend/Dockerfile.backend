@@ -13,8 +13,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir python-dotenv psycopg2-binary
+RUN pip install --no-cache-dir --timeout=300 --retries 10 \
+    -r requirements.txt && \
+    pip install --no-cache-dir --timeout=300 --retries 10 \
+    python-dotenv psycopg2-binary
 
 COPY backend/ .
 COPY docker_backend/main_backend.py .
