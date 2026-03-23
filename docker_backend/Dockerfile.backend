@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Удаляем annotated-doc из requirements — его нет на PyPI
+# Удаляем annotated-doc — его нет на PyPI, и добавляем недостающие пакеты
 RUN grep -v "annotated-doc" requirements.txt > requirements_fixed.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
     --trusted-host pypi.org \
@@ -23,7 +23,7 @@ RUN grep -v "annotated-doc" requirements.txt > requirements_fixed.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
-    python-dotenv psycopg2-binary
+    python-dotenv psycopg2-binary sqlalchemy
 
 COPY backend/ .
 COPY docker_backend/main_backend.py .
