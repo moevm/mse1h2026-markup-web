@@ -16,12 +16,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir python-dotenv psycopg2-binary
 
-COPY . .
+COPY backend/ .
+COPY docker_backend/main_backend.py .
+COPY docker_backend/entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 RUN mkdir -p datasets
-
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 

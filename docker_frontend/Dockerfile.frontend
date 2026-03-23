@@ -2,11 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Фронтенду нужны только fastapi, uvicorn и httpx для проксирования
 RUN pip install --no-cache-dir fastapi uvicorn httpx
 
-# Копируем сервер и статику
-COPY main_frontend.py .
+COPY docker_frontend/main_frontend.py .
 COPY frontend/ frontend/
 
 EXPOSE 80
