@@ -2,9 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --timeout=300 \
-    -i https://pypi.org/simple \
-    --retries 10 \
+RUN pip install --no-cache-dir --timeout=300 --retries 10 \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
     fastapi uvicorn httpx
 
 COPY docker_frontend/main_frontend.py .
