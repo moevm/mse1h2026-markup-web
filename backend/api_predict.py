@@ -11,11 +11,9 @@ from db import Dataset
 import io
 import os
 
-
 router = APIRouter()
 
-
-# модели запроса
+# Модели запроса
 class AnnotationItem(BaseModel):
     class_id: int
     x1: int
@@ -29,50 +27,49 @@ class LabeledImage(BaseModel):
 
 
 def get_images_dir(dataset_name: str) -> str:
-    '''создание директорий под датасеты'''
     path = os.path.join("datasets", dataset_name, "images", "train")
     os.makedirs(path, exist_ok=True)
     return path
 
 
 def get_dataset_by_name(dataset_name: str) -> Dataset:
-    '''находим датасет в бд по имени, кидаем 404 если не найден'''
     with Session() as session:
         dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
         if not dataset:
             raise HTTPException(status_code=404, detail=f"датасет: {dataset_name} не найден")
-        # чтобы объект жил за пределами сессии запоминаем нужные поля
         session.expunge(dataset)
         return dataset
 
-@router.post("/upload/{dataset_name}")
+
+@router.post("/api/upload/{dataset_name}")
 async def upload(dataset_name: str, files: List[UploadFile] = File(...)):
-    '''загрузка конкретного набора файлов'''
     get_dataset_by_name(dataset_name)
     images_dir = get_images_dir(dataset_name)
     saved = []
 
     for file in files:
         contents = await file.read()
-        '''проверка на корректность данных'''
         try:
             Image.open(io.BytesIO(contents)).verify()
         except UnidentifiedImageError:
             raise HTTPException(status_code=400, detail=f"{file.filename} - не явл. картинкой")
-        save_path = os.path.join(images_dir, file.filename)
+        
+        # Безопасное имя файла
+        safe_filename = os.path.basename(file.filename)
+        save_path = os.path.join(images_dir, safe_filename)
+        
         with open(save_path, "wb") as f:
             f.write(contents)
-        saved.append({"filename": file.filename, "path": save_path})
+        saved.append({"filename": safe_filename, "path": save_path})
 
     return {"dataset": dataset_name, "uploaded": saved}
 
 
-@router.post("/train/{dataset_name}")
+@router.post("/api/train/{dataset_name}")
 async def train(dataset_name: str):
-    '''дообучение на уже сохранённых метках'''
     dataset = get_dataset_by_name(dataset_name)
-
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
+    
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
 
@@ -84,12 +81,11 @@ async def train(dataset_name: str):
     return {"status": "ok", "dataset": dataset_name, "model_version": version}
 
 
-@router.post("/correct/{dataset_name}")
+@router.post("/api/correct/{dataset_name}")
 async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
-    '''сохранение исправленных аннотаций + дообучение'''
     dataset = get_dataset_by_name(dataset_name)
-
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
+    
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail=f"изображения датасета {dataset_name} не найдены")
 
@@ -98,32 +94,34 @@ async def correct(dataset_name: str, labeled_images: List[LabeledImage]):
         raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
     for item in labeled_images:
-        image_path = os.path.join(images_dir, item.filename)
+        safe_filename = os.path.basename(item.filename)
+        image_path = os.path.join(images_dir, safe_filename)
+        
         if not os.path.exists(image_path):
-            raise HTTPException(status_code=404, detail=f"{item.filename} не найден в {dataset_name}")
-        annotator.save_labels(dataset_name, item.filename, [ann.model_dump() for ann in item.annotations])
+            raise HTTPException(status_code=404, detail=f"{safe_filename} не найден в {dataset_name}")
+        
+        annotator.save_labels(dataset_name, safe_filename, [ann.model_dump() for ann in item.annotations])
 
     _, version = _train_and_save(dataset, dataset_name, annotator)
     return {"status": "ok", "dataset": dataset_name, "model_version": version}
 
 
-@router.get("/datasets/{dataset_name}/images")
+@router.get("/api/datasets/{dataset_name}/images")
 async def list_images(dataset_name: str):
-    '''список изображений датасета'''
     images_dir = os.path.join("datasets", dataset_name, "images", "train")
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail="датасет не найден")
+    
     files = [f for f in os.listdir(images_dir)
              if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
     return {"dataset": dataset_name, "images": files}
 
 
-@router.get("/datasets/{dataset_name}/images/{filename}")
+@router.get("/api/datasets/{dataset_name}/images/{filename}")
 async def get_image(dataset_name: str, filename: str):
-    '''отдать конкретное изображение'''
-    image_path = os.path.join("datasets", dataset_name, "images", "train", filename)
+    safe_filename = os.path.basename(filename)
+    image_path = os.path.join("datasets", dataset_name, "images", "train", safe_filename)
+    
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="файл не найден")
     return FileResponse(image_path)
-
-
