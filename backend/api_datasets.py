@@ -6,6 +6,9 @@ from model_registry import get_all_models, get_model_by_id
 from helper import invalidate_annotator
 import os
 from typing import Optional
+from helper import get_annotator, invalidate_annotator
+from training import _train_and_save
+
 
 router = APIRouter()
 
@@ -124,12 +127,22 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
         if not dataset:
             raise HTTPException(status_code=404, detail="датасет не найден")
         dataset.current_model_architecture = body.architecture
+        session.expunge(dataset)
         session.commit()
 
     # сбрасываем кеш чтобы следующий predict загрузил новую модель
     invalidate_annotator(dataset_id)
 
+    # если есть размеченные данные — дообучаем новую модель чтобы не терять прогресс
+    labels_dir = os.path.join("datasets", dataset.name, "labels", "train")
+    if os.path.exists(labels_dir) and os.listdir(labels_dir):
+        annotator = get_annotator(dataset_id)
+        if annotator:
+            _train_and_save(dataset, dataset.name, annotator)
+            invalidate_annotator(dataset_id)
+
     return {"status": "ok", "architecture": body.architecture}
+
 
 
 

@@ -49,7 +49,7 @@ class ModelVersion(Base):
     map50_95: Mapped[float] = mapped_column(nullable=True)
     mean_iou: Mapped[float] = mapped_column(nullable=True)
     confusion_matrix_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # будет хранить строку с матрицей ошибок в формате json
-
+    mlflow_run_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True) # id чтобы связать эксперемент с записью в бд
 
 
 class TrainingConfig(Base):
