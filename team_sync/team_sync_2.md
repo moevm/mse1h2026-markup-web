@@ -12,7 +12,7 @@
   - Глебова В.С.
   - Басик В. В.
 - **Протоколист**: Комаров Д.Е.
-- **Запись встречи**:[url]("https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/screencast_team_sync_2.mp4")
+- **Запись встречи**: [url]("https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/screencast_team_sync_2.mp4")
 
 
 
