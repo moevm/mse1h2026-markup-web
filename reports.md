@@ -32,7 +32,7 @@
 
 ## Итерация №2
 ### Презентация
-[Презентация итерация 1](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_2.pdf)
+[Презентация итерация 2](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_2.pdf)
 ### Скринкасты
 [Скринкаст](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/screncast_iter_1.mp4)
 ### Запланированные задачи
