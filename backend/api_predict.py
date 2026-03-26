@@ -1,7 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from requests import get
 from activate import Session
+from backend import annotator
 from helper import get_annotator, invalidate_annotator
 from typing import List
 import json
@@ -125,3 +127,38 @@ async def get_image(dataset_name: str, filename: str):
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="файл не найден")
     return FileResponse(image_path)
+
+
+@router.post('/api/predict/{dataset_name}/{filename}')
+async def predict(dataset_name: str, filename: str):
+    """
+    Предсказание объектов на изображении.
+    Возвращает список bounding boxes с метками и координатами.
+    """
+    dataset = get_dataset_by_name(dataset_name)
+    annotator = get_annotator(dataset.id)
+
+    if not annotator:
+        raise HTTPException(status_code=500, detail="не удалось загрузить модель")
+    
+    safe_filename = os.path.basename(filename)
+    image_path = os.path.join("datasets", dataset_name, "images", "train", safe_filename)
+
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail="файл не найден")
+    
+    boxes = annotator.predict(image_path)
+    img_w, img_h = Image.open(image_path).size
+
+    return [
+        {
+            "id": i,
+            "label": b["class_name"],
+            "conf": b["confidence"],
+            "x": b["x1"] / img_w * 100,
+            "y": b["y1"] / img_h * 100,
+            "w": (b["x2"] - b["x1"]) / img_w * 100,
+            "h": (b["y2"] - b["y1"]) / img_h * 100,
+        }
+        for i, b in enumerate(boxes)
+    ]
