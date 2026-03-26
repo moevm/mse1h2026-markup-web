@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 from activate import Session
 from db import Base, Dataset, DatasetStatus, TrainingConfig
 from model_registry import get_all_models, get_model_by_id
@@ -8,6 +9,8 @@ import os
 from typing import Optional
 from helper import get_annotator, invalidate_annotator
 from training import _train_and_save
+from db import ModelVersion
+import json
 
 
 router = APIRouter()
@@ -193,3 +196,71 @@ async def update_hyperparams(dataset_id: int, body: TrainingConfigRequest):
 
         session.commit()
         return {"status": "ok"}
+    
+
+@router.get('/api/datasets/{dataset_id}/metrics')
+async def get_metrics(dataset_id: int):
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        
+
+        model_versions = session.execute(
+            select(ModelVersion)
+            .where(ModelVersion.dataset_id == dataset_id)
+            .order_by(ModelVersion.version.asc())
+        ).scalars().all()
+
+        return [
+        {
+            "version": v.version,
+            "architecture": v.architecture,
+            "epochs": v.epochs,
+            "is_active": v.is_active,
+            "created_at": v.created_at.isoformat(),
+            "precision": v.precision,
+            "recall": v.recall,
+            "f1": v.f1,
+            "map50": v.map50,
+            "map50_95": v.map50_95,
+            "mean_iou": v.mean_iou,
+            "confusion_matrix": json.loads(v.confusion_matrix_json) if v.confusion_matrix_json else None,
+            "mlflow_run_id": v.mlflow_run_id,
+        }
+        for v in model_versions
+    ]
+    
+@router.get('/api/datasets/{dataset_id}/metrics/latest')
+async def get_curr_metrics(dataset_id: int):
+    with Session() as session:
+
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        
+        model_vers_lts = session.execute(
+            select(ModelVersion)
+            .where(ModelVersion.dataset_id == dataset_id)
+            .where(ModelVersion.is_active == True)
+        ).scalar_one_or_none()
+
+        if not model_vers_lts:
+            raise HTTPException(status_code=404, detail='Нет Активной модели')
+        
+        v = model_vers_lts
+        return {
+            "version": v.version,
+            "architecture": v.architecture,
+            "epochs": v.epochs,
+            "is_active": v.is_active,
+            "created_at": v.created_at.isoformat(),
+            "precision": v.precision,
+            "recall": v.recall,
+            "f1": v.f1,
+            "map50": v.map50,
+            "map50_95": v.map50_95,
+            "mean_iou": v.mean_iou,
+            "confusion_matrix": json.loads(v.confusion_matrix_json) if v.confusion_matrix_json else None,
+            "mlflow_run_id": v.mlflow_run_id,
+}

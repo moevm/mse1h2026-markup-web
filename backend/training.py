@@ -3,6 +3,7 @@ from helper import invalidate_annotator
 import json
 from db import Dataset, ModelVersion, TrainingConfig
 from ml_tracking import log_training_run
+from augumentation import ImageAugmentor
 
 def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str, int]:
     '''общий блок: достаём гиперпараметры, обучаем, считаем метрики, сохраняем версию'''
@@ -12,6 +13,11 @@ def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str
         config = session.query(TrainingConfig).filter(
             TrainingConfig.dataset_id == dataset.id
         ).first()
+
+     # TODO: интеграция аугментации в train flow
+    # augmentor = ImageAugmentor()
+    # augmentor.augment_dataset(images_dir, labels_dir, output_images_dir, output_labels_dir)
+    # нужно согласования структуры папок с фронтом 
 
     if config:
         model_path, version = annotator.train(

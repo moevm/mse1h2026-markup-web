@@ -1,3 +1,5 @@
+import os
+
 import cv2
 import numpy as np
 import random
@@ -173,27 +175,42 @@ class ImageAugmentor:
         return image, new_bboxes
 
     def augment_dataset(self, images_dir: str, labels_dir: str, output_images_dir: str, output_labels_dir: str, max_per_image: int = 2, sample_ratio: float = 0.75):
-        """
-        Аугментация всего датасета.
+        os.makedirs(output_images_dir, exist_ok=True)
+        os.makedirs(output_labels_dir, exist_ok=True)
 
-        Args:
-            images_dir: папка с оригинальными изображениями
-            labels_dir: папка с txt-лейблами в YOLO-формате
-            output_images_dir: папка для сохранения аугментированных изображений
-            output_labels_dir: папка для сохранения аугментированных лейблов
-            max_per_image: сколько аугментаций на одно изображение (1-2)
-            sample_ratio: доля изображений для аугментации (0.75 = 75%)
+        images = [f for f in os.listdir(images_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        selected = random.sample(images, k=int(len(images) * sample_ratio))
 
-        Returns:
-            int — количество сгенерированных изображений
-        """
-        # TODO: создать output папки если не существуют
-        # TODO: собрать список изображений из images_dir
-        # TODO: отобрать случайные sample_ratio% из них
-        # TODO: для каждого:
-        #   - прочитать соответствующий txt-лейбл
-        #   - распарсить боксы
-        #   - вызвать self.augment() max_per_image раз
-        #   - сохранить новое изображение и новый txt-лейбл в output папки
-        # TODO: вернуть количество сгенерированных
-        pass
+        generated = 0
+
+        for img_name in selected:
+            stem = os.path.splitext(img_name)[0]
+            label_path = os.path.join(labels_dir, stem + ".txt")
+
+            if not os.path.exists(label_path):
+                continue
+
+            # парсим боксы
+            bboxes = []
+            with open(label_path, "r") as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) < 5:
+                        continue
+                    bboxes.append((int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])))
+
+            image_path = os.path.join(images_dir, img_name)
+
+            for i in range(max_per_image):
+                aug_image, aug_bboxes = self.augment(image_path, bboxes)
+
+                out_name = f"{stem}_aug{generated}"
+                cv2.imwrite(os.path.join(output_images_dir, out_name + ".jpg"), aug_image)
+
+                with open(os.path.join(output_labels_dir, out_name + ".txt"), "w") as f:
+                    for bbox in aug_bboxes:
+                        f.write(f"{bbox[0]} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f} {bbox[4]:.6f}\n")
+
+                generated += 1
+
+        return generated
