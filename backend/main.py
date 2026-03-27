@@ -72,7 +72,7 @@ async def select_folder():
         return JSONResponse({"path": None, "error": str(e)})
 
 # создать если нет 
-create_db_tables()
+#create_db_tables()
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

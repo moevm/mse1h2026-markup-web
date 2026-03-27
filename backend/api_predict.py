@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from requests import get
 from activate import Session
-from backend import annotator
+import annotator
 from helper import get_annotator, invalidate_annotator
 from typing import List
 import json
