@@ -28,8 +28,8 @@ services:
 
   backend:
     build:
-      context: ..
-      dockerfile: docker_backend/Dockerfile.backend
+      context: .
+      dockerfile: backend/Dockerfile.backend
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -44,16 +44,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker_frontend/Dockerfile.frontend
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:
