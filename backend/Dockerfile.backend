@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
-COPY backend/ .
-
 RUN grep -v "annotated-doc" requirements.txt > requirements_fixed.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
     -r requirements_fixed.txt && \
     pip install --no-cache-dir --timeout=300 --retries 10 \
     python-dotenv psycopg2-binary sqlalchemy
+
+COPY backend/ .
 
 RUN mkdir -p datasets
 

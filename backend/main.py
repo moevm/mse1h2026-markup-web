@@ -4,8 +4,17 @@ from activate import create_db_tables
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:80", "http://localhost"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api_router)
 app.include_router(datasets_router)
 
