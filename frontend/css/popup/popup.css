@@ -16,14 +16,17 @@
   background: #1e2235;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: 36px;
+  padding: 50px;
   position: relative;
   min-width: 360px;
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
   color: #fff;
-  animation: popup-in 2s cubic-bezier(.34, 1.56, .64, 1);  
+  animation: popup-in 2s cubic-bezier(.34, 1.56, .64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .popup__close {
@@ -43,4 +46,52 @@
   justify-content: center;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
+}
+
+.popup__title {
+  font-size: 26px; 
+}
+
+.popup__input {
+  padding: 10px;
+  border: none;
+  background: #2b314d;
+  color: #fff;
+  outline: none;
+  border-radius: 10px;
+}
+
+.popup__btn {
+  cursor: pointer;
+}
+
+.popup__btn--addDataset {
+  width: 100%;
+  height: 40px;
+  border-radius: 40px;
+  border: 0;
+  background: #2b314d;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.7s, transform 0.65s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.popup__btn--addDataset:hover {
+  background: #6c5ce7;
+  transform: scale(1.02);
+}
+
+.popup__btn--addDataset:active {
+  transform: scale(0.98);
+}
+
+.popup__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.popup__actions {
+  width: 100%;
 }
