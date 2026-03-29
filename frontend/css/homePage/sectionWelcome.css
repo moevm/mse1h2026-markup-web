@@ -21,3 +21,18 @@
   font-weight: 400;
   color: #94A3B8;
 }
+
+.section-welcome__text::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: currentColor;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  animation: blink 0.7s step-end infinite;
+}
+
+.section-welcome__text.typing-done::after {
+  animation: blink 0.7s step-end infinite;
+}
