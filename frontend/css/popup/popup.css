@@ -1,0 +1,97 @@
+@import url(./interactions.css);
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: overlay-in 1s ease;
+}
+
+.popup {
+  background: #1e2235;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 50px;
+  position: relative;
+  min-width: 800px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  color: #fff;
+  animation: popup-in 2s cubic-bezier(.34, 1.56, .64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.popup__close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.popup__title {
+  font-size: 26px; 
+}
+
+.popup__input {
+  padding: 10px;
+  border: none;
+  background: #2b314d;
+  color: #fff;
+  outline: none;
+  border-radius: 10px;
+}
+
+.popup__btn {
+  cursor: pointer;
+}
+
+.popup__btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 40px;
+  border: 0;
+  background: #2b314d;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.7s, transform 0.65s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.popup__btn:hover {
+  background: #6c5ce7;
+  transform: scale(1.02);
+}
+
+.popup__btn:active {
+  transform: scale(0.98);
+}
+
+.popup__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.popup__actions {
+  width: 100%;
+}

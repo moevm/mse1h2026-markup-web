@@ -1,0 +1,4 @@
+.popup__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}

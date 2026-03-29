@@ -1,0 +1,8 @@
+.section-datasets-choose__button:hover {
+  transform: scale(1.03);
+}
+
+.section-datasets-choose__button:hover .section-datasets-choose__image-btn {
+  transform: scale(1.2) rotate(-8deg);
+  filter: brightness(1.3);
+}

@@ -12,6 +12,18 @@ from training import _train_and_save
 from db import ModelVersion
 import json
 
+DATASETS_ROOT_HOST = "C:/"
+DATASETS_ROOT_CONTAINER = "/host_c"
+
+def resolve_container_path(user_path: str) -> str:
+    user_path = user_path.replace("\\", "/")
+    host_root = DATASETS_ROOT_HOST.replace("\\", "/").rstrip("/")
+    
+    if not user_path.lower().startswith(host_root.lower()):
+        raise ValueError(f"Путь должен находиться внутри {host_root}")
+    
+    relative = user_path[len(host_root):].lstrip("/")
+    return os.path.join(DATASETS_ROOT_CONTAINER, relative)
 
 router = APIRouter()
 
@@ -61,13 +73,19 @@ async def get_datasets():
 async def add_dataset(body: AddDatasetRequest):
     '''добавить новый датасет по пути на диске'''
 
+    try:
+        container_path = resolve_container_path(body.path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
     # проверяем что путь существует
-    if not os.path.exists(body.path):
+    if not os.path.exists(container_path):
         raise HTTPException(status_code=400, detail="указанный путь не существует")
 
     # считаем количество изображений
     total = 0
-    for root, dirs, files in os.walk(body.path):
+    for root, dirs, files in os.walk(container_path):
         total += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
     with Session() as session:
@@ -81,7 +99,7 @@ async def add_dataset(body: AddDatasetRequest):
             status_id=0,       
             total_size=total,
             inwork_size=0,
-            path=body.path,
+            path=container_path,
             average_percent_success=None
         )
         session.add(dataset)

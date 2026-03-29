@@ -19,6 +19,12 @@
     <link rel="stylesheet" href="/css/homePage/sectionWelcome.css">
     <link rel="stylesheet" href="/css/homePage/sectionDatasetsChoose.css">
     <link rel="stylesheet" href="/css/homePage/sectionRecentDatasets.css">
+
+    <link rel="stylesheet" href="/css/homePage/interactions.css">
+    <link rel="stylesheet" href="/css/homePage/animations.css">
+
+    <link rel="stylesheet" href="/css/popup/popup.css">
+
   </head>
   <body>
     <header class="header">
@@ -34,12 +40,12 @@
         <div class="section-welcome__welcome-image-box">
           <img
             class="section-welcome__welcome-image"
-            src="/img/svg/welcome-image.svg"
+            src="/img/homePage/welcome-image.gif"
             alt="welcome-image"
           />
         </div>
         <h1 class="section-welcome__title">Добро пожаловать</h1>
-        <p class="section-welcome__text">
+        <p class="section-welcome__text" data-typewriter>
           Начните работу с изображениями, загрузив новый набор данных или
           продолжив текущий проект.
         </p>
@@ -96,144 +102,6 @@
         </header>
         <section class="section-recent-datasets__datasets-items">
           <ul class="section-recent-datasets__datasets-list">
-            <li class="section-recent-datasets__datasets-list-item">
-              <div class="section-recent-datasets__dataset-main-info">
-                <img
-                  class="section-recent-datasets__image-dataset-preview"
-                  src="/img/homePage/dataset-image-preview-architect.png"
-                  alt="dataset-image-preview"
-                />
-                <div class="section-recent-datasets__dataset-info">
-                  <h3 class="section-recent-datasets__dataset-title">
-                    Архитектура Датасет
-                  </h3>
-                  <div class="section-recent-datasets__dataset-subdata">
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-count-images"
-                    >
-                      1,240 изображений
-                    </p>
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-subdata-text--time"
-                    >
-                      Создан 2 часа назад
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="section-recent-datasets__dataset-action-box">
-                <div class="section-recent-datasets__dataset-status">
-                  <input
-                    class="section-recent-datasets__input-status-markup"
-                    type="range"
-                    disabled
-                    value="65"
-                  />
-                  <p class="section-recent-datasets__datasets-status-text">
-                    65% размечено
-                  </p>
-                </div>
-                <button class="section-recent-datasets__button-goto">
-                  <img
-                    class="section-recent-datasets__image-goto"
-                    src="/img/svg/right-arrow.svg"
-                    alt="right-arrow-icon"
-                  />
-                </button>
-              </div>
-            </li>
-            <li class="section-recent-datasets__datasets-list-item">
-              <div class="section-recent-datasets__dataset-main-info">
-                <img
-                  class="section-recent-datasets__image-dataset-preview"
-                  src="/img/homePage/dataset-image-preview-night.png"
-                  alt="dataset-image-preview"
-                />
-                <div class="section-recent-datasets__dataset-info">
-                  <h3 class="section-recent-datasets__dataset-title">
-                    Ночной Датасет
-                  </h3>
-                  <div class="section-recent-datasets__dataset-subdata">
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-count-images"
-                    >
-                      450 изображений
-                    </p>
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-subdata-text--time"
-                    >
-                      Создан вчера
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="section-recent-datasets__dataset-action-box">
-                <div class="section-recent-datasets__dataset-status">
-                  <input
-                    class="section-recent-datasets__input-status-markup"
-                    type="range"
-                    disabled
-                    value="100"
-                  />
-                  <p class="section-recent-datasets__datasets-status-text">
-                    завершено
-                  </p>
-                </div>
-                <button class="section-recent-datasets__button-goto">
-                  <img
-                    class="section-recent-datasets__image-goto"
-                    src="/img/svg/right-arrow.svg"
-                    alt="right-arrow-icon"
-                  />
-                </button>
-              </div>
-            </li>
-            <li class="section-recent-datasets__datasets-list-item">
-              <div class="section-recent-datasets__dataset-main-info">
-                <img
-                  class="section-recent-datasets__image-dataset-preview"
-                  src="/img/homePage/dataset-image-preview-drons.png"
-                  alt="dataset-image-preview"
-                />
-                <div class="section-recent-datasets__dataset-info">
-                  <h3 class="section-recent-datasets__dataset-title">
-                    Дроны Датасет
-                  </h3>
-                  <div class="section-recent-datasets__dataset-subdata">
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-count-images"
-                    >
-                      3,800 изображений
-                    </p>
-                    <p
-                      class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-subdata-text--time"
-                    >
-                      3 дня назад
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="section-recent-datasets__dataset-action-box">
-                <div class="section-recent-datasets__dataset-status">
-                  <input
-                    class="section-recent-datasets__input-status-markup"
-                    type="range"
-                    disabled
-                    value="12"
-                  />
-                  <p class="section-recent-datasets__datasets-status-text">
-                    12% размечено
-                  </p>
-                </div>
-                <button class="section-recent-datasets__button-goto">
-                  <img
-                    class="section-recent-datasets__image-goto"
-                    src="/img/svg/right-arrow.svg"
-                    alt="right-arrow-icon"
-                  />
-                </button>
-              </div>
-            </li>
           </ul>
         </section>
       </section>
@@ -242,6 +110,29 @@
       <p class="footer-text">@Команда крутых перцев</p>
     </footer>
     <div></div>
+    <template id="dataset-item-template">
+      <li class="section-recent-datasets__datasets-list-item">
+        <div class="section-recent-datasets__dataset-main-info">
+          <img class="section-recent-datasets__image-dataset-preview" alt="dataset-image-preview">
+          <div class="section-recent-datasets__dataset-info">
+            <h3 class="section-recent-datasets__dataset-title"></h3>
+            <div class="section-recent-datasets__dataset-subdata">
+              <p class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-count-images"></p>
+              <p class="section-recent-datasets__dataset-subdata-text section-recent-datasets__dataset-subdata-text--time"></p>
+            </div>
+          </div>
+        </div>
+        <div class="section-recent-datasets__dataset-action-box">
+          <div class="section-recent-datasets__dataset-status">
+            <input class="section-recent-datasets__input-status-markup" type="range" disabled>
+            <p class="section-recent-datasets__datasets-status-text"></p>
+          </div>
+          <button class="section-recent-datasets__button-goto">
+            <img class="section-recent-datasets__image-goto" src="/img/svg/right-arrow.svg" alt="right-arrow-icon">
+          </button>
+        </div>
+      </li>
+    </template>
     <script type="module" src="/js/index.js" defer></script>
   </body>
 </html>
