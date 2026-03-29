@@ -1,5 +1,5 @@
 async function selectFolder() {
-  const res = await fetch('http://localhost:8000/utils/select-folder');
+  const res = await fetch('/utils/select-folder');
   const { path } = await res.json();
   if (path) {
     alert(path);

@@ -4,29 +4,33 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import subprocess
 import sys
+from pathlib import Path
 
 app = FastAPI()
 
-app.mount("/css", StaticFiles(directory="../frontend/css"), name="css")
-app.mount("/js", StaticFiles(directory="../frontend/js"), name="js")
-app.mount("/img", StaticFiles(directory="../frontend/img"), name="img")
-app.mount("/pages", StaticFiles(directory="../frontend/pages"), name="pages")
+BASE_DIR = Path(__file__).parent
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
+
+app.mount("/css", StaticFiles(directory=FRONTEND_DIR / "css"), name="css")
+app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
+app.mount("/img", StaticFiles(directory=FRONTEND_DIR / "img"), name="img")
+app.mount("/pages", StaticFiles(directory=FRONTEND_DIR / "pages"), name="pages")
 
 @app.get("/")
 async def index():
-    return FileResponse("../frontend/index.html")
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 @app.get("/stats")
 async def stats():
-    return FileResponse("../frontend/pages/stats.html")
+    return FileResponse(FRONTEND_DIR / "pages/stats.html")
 
 @app.get("/datasets")
-async def work():
-    return FileResponse("../frontend/pages/datasets.html")
+async def datasets():
+    return FileResponse(FRONTEND_DIR / "pages/datasets.html")
 
 @app.get("/work")
 async def work():
-    return FileResponse("../frontend/pages/work.html")
+    return FileResponse(FRONTEND_DIR / "pages/work.html")
 
 @app.get("/utils/select-folder")
 async def select_folder():

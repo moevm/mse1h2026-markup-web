@@ -32,11 +32,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-}
-
-.section-datasets-cards__menu-button--active {
-  background-color: #6567F1;
-  color: #fff;
+  transition: transform 0.5s ease-in-out;
 }
 
 .section-datasets-cards__menu-counter {

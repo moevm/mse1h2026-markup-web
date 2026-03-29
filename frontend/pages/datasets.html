@@ -19,6 +19,8 @@
     <link rel="stylesheet" href="/css/datasetsPage/datasetsPage.css">
     <link rel="stylesheet" href="/css/datasetsPage/sectionDatasetsHeader.css">
     <link rel="stylesheet" href="/css/datasetsPage/sectionDatasetsCards.css">
+
+    <link rel="stylesheet" href="/css/datasetsPage/interactions.css">
   </head>
   <body>
     <header class="header">
@@ -63,262 +65,24 @@
             <li class="section-datasets-cards__menu-item">
               <button class="section-datasets-cards__menu-button">
                 В процессе
-                <span class="section-datasets-cards__menu-counter">1</span>
+                <span class="section-datasets-cards__menu-counter section-datasets-cards__menu-counter--light">1</span>
               </button>
             </li>
             <li class="section-datasets-cards__menu-item">
               <button class="section-datasets-cards__menu-button">
                 Ожидает проверки
-                <span class="section-datasets-cards__menu-counter">1</span>
+                <span class="section-datasets-cards__menu-counter section-datasets-cards__menu-counter--light">1</span>
               </button>
             </li>
             <li class="section-datasets-cards__menu-item">
               <button class="section-datasets-cards__menu-button">
                 Завершено
-                <span class="section-datasets-cards__menu-counter">1</span>
+                <span class="section-datasets-cards__menu-counter section-datasets-cards__menu-counter--light">1</span>
               </button>
             </li>
           </ul>
         </nav>
         <ul class="section-datasets-cards__cards">
-          <li class="section-datasets-cards__card">
-            <div class="section-datasets-cards__card-preview-box">
-              <img
-                class="section-datasets-cards__card-image"
-                src="/img/datasetsPage/dataset-preview-trafic.png"
-                alt="dataset-card-preview-image"
-              />
-              <div class="section-datasets-cards__count-images-box">
-                <img
-                  class="section-datasets-cards__image-icon"
-                  src="/img/svg/image-icon.svg"
-                  alt="image-icon"
-                />
-                <span class="section-datasets-cards__count-images-text">
-                  1,500
-                </span>
-              </div>
-            </div>
-            <div class="section-datasets-cards__card-data">
-              <h3 class="section-datasets-cards__card-title">
-                Городской трафик
-              </h3>
-              <h4 class="section-datasets-cards__card-time">
-                Обновлено 2 часа назад
-              </h4>
-              <div class="section-datasets-cards__card-status-box">
-                <div class="section-datasets-cards__card-text-status-box">
-                  <div class="section-datasets-cards__card-progres-status-box">
-                    <img
-                      class="section-datasets-cards__card-progres-image"
-                      src="/img/svg/in-progress-icon.svg"
-                      alt="in-progress-icon"
-                    />
-                    <span class="section-datasets-cards__card-progres-text"
-                      >В процессе</span
-                    >
-                  </div>
-                  <span class="section-datasets-cards__card-text-percent"
-                    >80%</span
-                  >
-                </div>
-                <input
-                  class="section-datasets-cards__card-input"
-                  type="range"
-                  disabled
-                  value="80"
-                />
-                <h4 class="section-datasets-cards__card-fraction-text-status">
-                  1,200 / 1,500 изображений размечено
-                </h4>
-              </div>
-              <button class="section-datasets-cards__card-button">
-                <img
-                  class="section-datasets-cards__card-button-image"
-                  src="/img/svg/goto-markup-icon.svg"
-                  alt="goto-markup-icon"
-                />
-                Продолжить разметку
-              </button>
-            </div>
-          </li>
-          <li class="section-datasets-cards__card">
-            <div class="section-datasets-cards__card-preview-box">
-              <img
-                class="section-datasets-cards__card-image"
-                src="/img/datasetsPage/dataset-preview-mrt.png"
-                alt="dataset-card-preview-image"
-              />
-              <div class="section-datasets-cards__count-images-box">
-                <img
-                  class="section-datasets-cards__image-icon"
-                  src="/img/svg/image-icon.svg"
-                  alt="image-icon"
-                />
-                <span class="section-datasets-cards__count-images-text">
-                  800
-                </span>
-              </div>
-            </div>
-            <div class="section-datasets-cards__card-data">
-              <h3 class="section-datasets-cards__card-title">Сканы МРТ</h3>
-              <h4 class="section-datasets-cards__card-time">Обновлено вчера</h4>
-              <div class="section-datasets-cards__card-status-box">
-                <div class="section-datasets-cards__card-text-status-box">
-                  <div class="section-datasets-cards__card-progres-status-box">
-                    <img
-                      class="section-datasets-cards__card-progres-image"
-                      src="/img/svg/wait-check-icon.svg"
-                      alt="in-progress-icon"
-                    />
-                    <span
-                      class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--check-status"
-                      >Ожидает проверки</span
-                    >
-                  </div>
-                  <span class="section-datasets-cards__card-text-percent"
-                    >56%</span
-                  >
-                </div>
-                <input
-                  class="section-datasets-cards__card-input section-datasets-cards__card-input--check-status"
-                  type="range"
-                  disabled
-                  value="56"
-                />
-                <h4 class="section-datasets-cards__card-fraction-text-status">
-                  450 / 800 изображений размечено
-                </h4>
-              </div>
-              <button
-                class="section-datasets-cards__card-button section-datasets-cards__card-button--check-status"
-              >
-                <img
-                  class="section-datasets-cards__card-button-image"
-                  src="/img/svg/check-icon.svg"
-                  alt="goto-markup-icon"
-                />
-                Проверить разметку
-              </button>
-            </div>
-          </li>
-          <li class="section-datasets-cards__card">
-            <div class="section-datasets-cards__card-preview-box">
-              <img
-                class="section-datasets-cards__card-image"
-                src="/img/datasetsPage/dataset-preview-engineer.png"
-                alt="dataset-card-preview-image"
-              />
-              <div class="section-datasets-cards__count-images-box">
-                <img
-                  class="section-datasets-cards__image-icon"
-                  src="/img/svg/image-icon.svg"
-                  alt="image-icon"
-                />
-                <span class="section-datasets-cards__count-images-text">
-                  2,100
-                </span>
-              </div>
-            </div>
-            <div class="section-datasets-cards__card-data">
-              <h3 class="section-datasets-cards__card-title">Механика</h3>
-              <h4 class="section-datasets-cards__card-time">
-                Обновлено 3 дня назад
-              </h4>
-              <div class="section-datasets-cards__card-status-box">
-                <div class="section-datasets-cards__card-text-status-box">
-                  <div class="section-datasets-cards__card-progres-status-box">
-                    <img
-                      class="section-datasets-cards__card-progres-image"
-                      src="/img/svg/done-icon.svg"
-                      alt="in-progress-icon"
-                    />
-                    <span
-                      class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--complete"
-                      >Завершено</span
-                    >
-                  </div>
-                  <span class="section-datasets-cards__card-text-percent"
-                    >100%</span
-                  >
-                </div>
-                <input
-                  class="section-datasets-cards__card-input section-datasets-cards__card-input--complete"
-                  type="range"
-                  disabled
-                  value="100"
-                />
-                <h4 class="section-datasets-cards__card-fraction-text-status">
-                  2,100 / 2,100 изображений размечено
-                </h4>
-              </div>
-              <button
-                class="section-datasets-cards__card-button section-datasets-cards__card-button--complete"
-              >
-                Готово
-              </button>
-            </div>
-          </li>
-          <li class="section-datasets-cards__card">
-            <div class="section-datasets-cards__card-preview-box">
-              <img
-                class="section-datasets-cards__card-image"
-                src="/img/datasetsPage/dataset-preview-nature.png"
-                alt="dataset-card-preview-image"
-              />
-              <div class="section-datasets-cards__count-images-box">
-                <img
-                  class="section-datasets-cards__image-icon"
-                  src="/img/svg/image-icon.svg"
-                  alt="image-icon"
-                />
-                <span class="section-datasets-cards__count-images-text">
-                  3,400
-                </span>
-              </div>
-            </div>
-            <div class="section-datasets-cards__card-data">
-              <h3 class="section-datasets-cards__card-title">Природа</h3>
-              <h4 class="section-datasets-cards__card-time">
-                Обновлено 5 часов назад
-              </h4>
-              <div class="section-datasets-cards__card-status-box">
-                <div class="section-datasets-cards__card-text-status-box">
-                  <div class="section-datasets-cards__card-progres-status-box">
-                    <img
-                      class="section-datasets-cards__card-progres-image"
-                      src="/img/svg/nstart-icon.svg"
-                      alt="in-progress-icon"
-                    />
-                    <span
-                      class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--nstarted"
-                      >Не начато</span
-                    >
-                  </div>
-                  <span class="section-datasets-cards__card-text-percent"
-                    >0%</span
-                  >
-                </div>
-                <input
-                  class="section-datasets-cards__card-input"
-                  type="range"
-                  disabled
-                  value="0"
-                />
-                <h4 class="section-datasets-cards__card-fraction-text-status">
-                  0 / 3,400 изображений размечено
-                </h4>
-              </div>
-              <button class="section-datasets-cards__card-button">
-                <img
-                  class="section-datasets-cards__card-button-image"
-                  src="/img/svg/to-markup-icon.svg"
-                  alt="goto-markup-icon"
-                />
-                Отправить на разметку
-              </button>
-            </div>
-          </li>
         </ul>
       </section>
     </main>
@@ -326,5 +90,222 @@
       <p class="footer-text">@Команда крутых перцев</p>
     </footer>
     <div></div>
+
+    <template id="dataset-card--just-load">
+      <li class="section-datasets-cards__card">
+        <div class="section-datasets-cards__card-preview-box">
+          <img
+            class="section-datasets-cards__card-image"
+            data-field="dataset-card-preview-image"
+            src=""
+            alt="dataset-card-preview-image"
+          />
+          <div class="section-datasets-cards__count-images-box">
+            <img
+              class="section-datasets-cards__image-icon"
+              src="/img/svg/image-icon.svg"
+              alt="image-icon"
+            />
+            <span class="section-datasets-cards__count-images-text" data-field="count-images-text">
+              
+            </span>
+          </div>
+        </div>
+        <div class="section-datasets-cards__card-data">
+          <h3 class="section-datasets-cards__card-title" data-field="dataset-name"></h3>
+          <h4 class="section-datasets-cards__card-time" data-field="dataset-last-activity">
+
+          </h4>
+          <div class="section-datasets-cards__card-status-box">
+            <div class="section-datasets-cards__card-text-status-box">
+              <div class="section-datasets-cards__card-progres-status-box">
+                <img
+                  class="section-datasets-cards__card-progres-image"
+                  src="/img/svg/nstart-icon.svg"
+                  alt="in-progress-icon"
+                />
+                <span
+                  class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--nstarted"
+                  >Не начато</span
+                >
+              </div>
+              <span class="section-datasets-cards__card-text-percent" data-field="dataset-percent"
+                ></span
+              >
+            </div>
+            <input
+              class="section-datasets-cards__card-input"
+              type="range"
+              disabled
+              value="0"
+            />
+            <h4 class="section-datasets-cards__card-fraction-text-status" data-field="dataset-count-fraction">
+              
+            </h4>
+          </div>
+          <button class="section-datasets-cards__card-button">
+            <img
+              class="section-datasets-cards__card-button-image"
+              src="/img/svg/to-markup-icon.svg"
+              alt="goto-markup-icon"
+            />
+            Начать разметку
+          </button>
+        </div>
+      </li>
+    </template>
+    <template id="dataset-card--in-progress">
+      <li class="section-datasets-cards__card">
+        <div class="section-datasets-cards__card-preview-box">
+          <img
+            class="section-datasets-cards__card-image"
+            data-field="dataset-card-preview-image"
+            src=""
+            alt="dataset-card-preview-image"
+          />
+          <div class="section-datasets-cards__count-images-box">
+            <img
+              class="section-datasets-cards__image-icon"
+              src="/img/svg/image-icon.svg"
+              alt="image-icon"
+            />
+            <span class="section-datasets-cards__count-images-text" data-field="count-images-text"></span>
+          </div>
+        </div>
+        <div class="section-datasets-cards__card-data">
+          <h3 class="section-datasets-cards__card-title" data-field="dataset-name"></h3>
+          <h4 class="section-datasets-cards__card-time" data-field="dataset-last-activity"></h4>
+          <div class="section-datasets-cards__card-status-box">
+            <div class="section-datasets-cards__card-text-status-box">
+              <div class="section-datasets-cards__card-progres-status-box">
+                <img
+                  class="section-datasets-cards__card-progres-image"
+                  src="/img/svg/in-progress-icon.svg"
+                  alt="in-progress-icon"
+                />
+                <span class="section-datasets-cards__card-progres-text">В процессе</span>
+              </div>
+              <span class="section-datasets-cards__card-text-percent" data-field="dataset-percent"></span>
+            </div>
+            <input
+              class="section-datasets-cards__card-input"
+              type="range"
+              disabled
+              data-field="dataset-range"
+            />
+            <h4 class="section-datasets-cards__card-fraction-text-status" data-field="dataset-count-fraction"></h4>
+          </div>
+          <button class="section-datasets-cards__card-button">
+            <img
+              class="section-datasets-cards__card-button-image"
+              src="/img/svg/goto-markup-icon.svg"
+              alt="goto-markup-icon"
+            />
+            Продолжить разметку
+          </button>
+        </div>
+      </li>
+    </template>
+    <template id="dataset-card--check-status">
+      <li class="section-datasets-cards__card">
+        <div class="section-datasets-cards__card-preview-box">
+          <img
+            class="section-datasets-cards__card-image"
+            data-field="dataset-card-preview-image"
+            src=""
+            alt="dataset-card-preview-image"
+          />
+          <div class="section-datasets-cards__count-images-box">
+            <img
+              class="section-datasets-cards__image-icon"
+              src="/img/svg/image-icon.svg"
+              alt="image-icon"
+            />
+            <span class="section-datasets-cards__count-images-text" data-field="count-images-text"></span>
+          </div>
+        </div>
+        <div class="section-datasets-cards__card-data">
+          <h3 class="section-datasets-cards__card-title" data-field="dataset-name"></h3>
+          <h4 class="section-datasets-cards__card-time" data-field="dataset-last-activity"></h4>
+          <div class="section-datasets-cards__card-status-box">
+            <div class="section-datasets-cards__card-text-status-box">
+              <div class="section-datasets-cards__card-progres-status-box">
+                <img
+                  class="section-datasets-cards__card-progres-image"
+                  src="/img/svg/wait-check-icon.svg"
+                  alt="wait-check-icon"
+                />
+                <span class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--check-status">Ожидает проверки</span>
+              </div>
+              <span class="section-datasets-cards__card-text-percent" data-field="dataset-percent"></span>
+            </div>
+            <input
+              class="section-datasets-cards__card-input section-datasets-cards__card-input--check-status"
+              type="range"
+              disabled
+              data-field="dataset-range"
+            />
+            <h4 class="section-datasets-cards__card-fraction-text-status" data-field="dataset-count-fraction"></h4>
+          </div>
+          <button class="section-datasets-cards__card-button section-datasets-cards__card-button--check-status">
+            <img
+              class="section-datasets-cards__card-button-image"
+              src="/img/svg/check-icon.svg"
+              alt="check-icon"
+            />
+            Проверить разметку
+          </button>
+        </div>
+      </li>
+    </template>
+    <template id="dataset-card--complete">
+      <li class="section-datasets-cards__card">
+        <div class="section-datasets-cards__card-preview-box">
+          <img
+            class="section-datasets-cards__card-image"
+            data-field="dataset-card-preview-image"
+            src=""
+            alt="dataset-card-preview-image"
+          />
+          <div class="section-datasets-cards__count-images-box">
+            <img
+              class="section-datasets-cards__image-icon"
+              src="/img/svg/image-icon.svg"
+              alt="image-icon"
+            />
+            <span class="section-datasets-cards__count-images-text" data-field="count-images-text"></span>
+          </div>
+        </div>
+        <div class="section-datasets-cards__card-data">
+          <h3 class="section-datasets-cards__card-title" data-field="dataset-name"></h3>
+          <h4 class="section-datasets-cards__card-time" data-field="dataset-last-activity"></h4>
+          <div class="section-datasets-cards__card-status-box">
+            <div class="section-datasets-cards__card-text-status-box">
+              <div class="section-datasets-cards__card-progres-status-box">
+                <img
+                  class="section-datasets-cards__card-progres-image"
+                  src="/img/svg/done-icon.svg"
+                  alt="done-icon"
+                />
+                <span class="section-datasets-cards__card-progres-text section-datasets-cards__card-progres-text--complete">Завершено</span>
+              </div>
+              <span class="section-datasets-cards__card-text-percent" data-field="dataset-percent"></span>
+            </div>
+            <input
+              class="section-datasets-cards__card-input section-datasets-cards__card-input--complete"
+              type="range"
+              disabled
+              data-field="dataset-range"
+            />
+            <h4 class="section-datasets-cards__card-fraction-text-status" data-field="dataset-count-fraction"></h4>
+          </div>
+          <button class="section-datasets-cards__card-button section-datasets-cards__card-button--complete">
+            Готово
+          </button>
+        </div>
+      </li>
+    </template>
+
   </body>
+  <script type="module" src="/js/datasets.js"></script>
 </html>

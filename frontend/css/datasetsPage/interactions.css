@@ -1,0 +1,11 @@
+.section-datasets-cards__card:hover {
+  transition: transform 0.6s ease;
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.section-datasets-cards__menu-button--active {
+  transform: scaleY(1.1);
+  background-color: #6567F1;
+  color: #fff;
+}
