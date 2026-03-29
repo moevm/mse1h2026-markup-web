@@ -18,7 +18,7 @@
   border-radius: 20px;
   padding: 50px;
   position: relative;
-  min-width: 360px;
+  min-width: 800px;
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
@@ -65,7 +65,7 @@
   cursor: pointer;
 }
 
-.popup__btn--addDataset {
+.popup__btn {
   width: 100%;
   height: 40px;
   border-radius: 40px;
@@ -77,12 +77,12 @@
   transition: background 0.7s, transform 0.65s cubic-bezier(.34, 1.56, .64, 1);
 }
 
-.popup__btn--addDataset:hover {
+.popup__btn:hover {
   background: #6c5ce7;
   transform: scale(1.02);
 }
 
-.popup__btn--addDataset:active {
+.popup__btn:active {
   transform: scale(0.98);
 }
 
