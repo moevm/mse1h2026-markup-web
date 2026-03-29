@@ -1,6 +1,6 @@
 #!/bin/bash
+docker-compose up -d
 
-export DB_HOST=127.0.0.1
-export DB_PORT=5432
-
-python3 backend/main.py
+python3 -m venv ./frontend-server/.venv
+./frontend-server/.venv/bin/pip install -r ./frontend-server/requirements.txt
+./frontend-server/.venv/bin/python ./frontend-server/main.py
