@@ -1,10 +1,22 @@
 import { createPopup } from "./popup.js";
+import { Notify } from "./utils/notify.js";
 
 async function selectFolder() {
-  const res = await fetch('/utils/select-folder');
-  const { path } = await res.json();
-  if (!path) return;
-  return path;
+  try {
+    const res = await fetch('/utils/select-folder');
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+
+    const data = await res.json();
+    if (!data.path) {
+      Notify.error("Путь не выбран");
+      return null;
+    }
+
+    return data.path;
+  } catch (err) {
+    Notify.error("Не удалось выбрать папку. Проверьте сервер.");
+    return null;
+  }
 }
 
 export async function uploadNewDataset() {
@@ -30,16 +42,22 @@ export async function uploadNewDataset() {
       return;
     }
 
-    const res = await fetch('http://localhost:8000/api/addDataset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset_name: name, path }),
-    });
+    try {
+      const res = await fetch('http://localhost:8000/api/addDataset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataset_name: name, path }),
+      });
 
-    if (!res.ok) {
-      return;
+      if (!res.ok) {
+        Notify.error(`Ошибка API: ${res.status}`);
+        return;
+      }
+
+      Notify.success("Датасет успешно добавлен");
+      window.location.href = `/datasets`;
+    } catch (err) {
+      Notify.error("Не удалось подключиться к серверу. Проверьте его работу.");
     }
-
-    window.location.href = `/datasets`;
   });
 }

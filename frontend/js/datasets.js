@@ -1,4 +1,6 @@
 import { STATUS_TEMPLATE_MAP, MENU_FILTER_MAP } from "/js/datasetsEnums.js";
+import { Notify } from "./utils/notify.js";
+import { uploadNewDataset } from "./addNewDataset.js";
 
 const DATASETS_MOCK = [
   {
@@ -133,9 +135,24 @@ function updateMenuCounters(datasets) {
 }
 
 async function fetchDatasets() {
-  return new Promise((resolve) =>
-    setTimeout(() => resolve(DATASETS_MOCK), 300)
-  );
+  try {
+    const res = await fetch("http://localhost:8000/api/getDatasets");
+
+    if (!res.ok) {
+      throw new Error(`HTTP error: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid data format");
+    }
+
+    return data;
+  } catch (err) {
+    Notify.error("Ошибка API")
+    return DATASETS_MOCK;
+  }
 }
 
 async function init() {
@@ -143,6 +160,8 @@ async function init() {
   renderDatasets(datasets);
   initFilters(datasets);
   updateMenuCounters(datasets);
+  const btn = document.querySelector('.section-datasets-header__button--upload-new-dataset');
+  btn.addEventListener('click', uploadNewDataset);
 }
 
 document.addEventListener("DOMContentLoaded", init);
