@@ -1,6 +1,7 @@
 import { STATUS_TEMPLATE_MAP, MENU_FILTER_MAP } from "/js/datasetsPage/datasetsEnums.js";
 import { Notify } from "./utils/notify.js";
 import { uploadNewDataset } from "./utils/addNewDataset.js";
+import { datasetsManager } from "./managers/datasetsManager.js";
 
 import { DATASETS_MOCK } from "./develop/mockdata.js";
 
@@ -12,9 +13,7 @@ function renderDatasetCard(dataset) {
   const templateId = STATUS_TEMPLATE_MAP[dataset.status_id];
   const template = document.getElementById(templateId);
   
-  if (!template) {
-    return null;
-  }
+  if (!template) return null;
 
   const clone = template.content.cloneNode(true);
   const q = (field) => clone.querySelector(`[data-field="${field}"]`);
@@ -31,6 +30,12 @@ function renderDatasetCard(dataset) {
 
   const range = q("dataset-range");
   if (range) range.value = percent;
+
+  const cardBtn = clone.querySelector(".section-datasets-cards__card-button");
+  cardBtn.addEventListener("click", () => {
+    datasetsManager.setDataset(JSON.stringify(dataset));
+    Notify.success(`Выбран датасет: ${dataset.name}`);
+  });
 
   return clone;
 }
@@ -94,7 +99,7 @@ async function fetchDatasets() {
 
     return data;
   } catch (err) {
-    Notify.error("Ошибка API")
+    Notify.error("Ошибка получения датасетов из API")
     return DATASETS_MOCK;
   }
 }
