@@ -1,64 +1,8 @@
-import { STATUS_TEMPLATE_MAP, MENU_FILTER_MAP } from "/js/datasetsEnums.js";
+import { STATUS_TEMPLATE_MAP, MENU_FILTER_MAP } from "/js/datasetsPage/datasetsEnums.js";
 import { Notify } from "./utils/notify.js";
-import { uploadNewDataset } from "./addNewDataset.js";
+import { uploadNewDataset } from "./utils/addNewDataset.js";
 
-const DATASETS_MOCK = [
-  {
-    id: 1,
-    name: "Городской трафик",
-    status_id: 3,
-    total_size: 1500,
-    inwork_size: 1200,
-    path: "/img/datasetsPage/dataset-preview-trafic.png",
-    lastactivity: "2 часа назад",
-    average_percent_success: 80,
-    current_model_architecture: "yolo11n",
-  },
-  {
-    id: 5,
-    name: "Городской трафик",
-    status_id: 3,
-    total_size: 1500,
-    inwork_size: 1200,
-    path: "/img/datasetsPage/dataset-preview-trafic.png",
-    lastactivity: "2 часа назад",
-    average_percent_success: 80,
-    current_model_architecture: "yolo11n",
-  },
-  {
-    id: 2,
-    name: "Сканы МРТ",
-    status_id: 2,
-    total_size: 800,
-    inwork_size: 450,
-    path: "/img/datasetsPage/dataset-preview-mrt.png",
-    lastactivity: "вчера",
-    average_percent_success: 56,
-    current_model_architecture: "yolo11n",
-  },
-  {
-    id: 3,
-    name: "Механика",
-    status_id: 1,
-    total_size: 2100,
-    inwork_size: 2100,
-    path: "/img/datasetsPage/dataset-preview-engineer.png",
-    lastactivity: "3 дня назад",
-    average_percent_success: 100,
-    current_model_architecture: "yolo11n",
-  },
-  {
-    id: 4,
-    name: "Пешеходы",
-    status_id: 0,
-    total_size: 950,
-    inwork_size: 0,
-    path: "/img/datasetsPage/dataset-preview-trafic.png",
-    lastactivity: "5 дней назад",
-    average_percent_success: null,
-    current_model_architecture: "yolo11n",
-  },
-];
+import { DATASETS_MOCK } from "./develop/mockdata.js";
 
 function formatTotal(n) {
   return n.toLocaleString("ru-RU");
@@ -67,8 +11,8 @@ function formatTotal(n) {
 function renderDatasetCard(dataset) {
   const templateId = STATUS_TEMPLATE_MAP[dataset.status_id];
   const template = document.getElementById(templateId);
+  
   if (!template) {
-    console.warn(`Template not found: ${templateId}`);
     return null;
   }
 
