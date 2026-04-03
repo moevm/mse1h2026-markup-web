@@ -9,20 +9,15 @@ services:
       POSTGRES_DB: ${DB_NAME:-markup_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-markup_db}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:8.12
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     depends_on:
       - db
 
@@ -32,20 +27,18 @@ services:
       dockerfile: backend/Dockerfile.backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-markup_db}
-      DATASETS_ROOT_HOST: "C:/"
+      DATASETS_ROOT_HOST: "/"
     volumes:
       - datasets_data:/app/datasets
-      - ${DATASETS_ROOT_HOST:-C:/}:/host_c:ro
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
 volumes:
   postgres_data:
