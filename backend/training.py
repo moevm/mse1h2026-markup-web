@@ -3,9 +3,8 @@ from helper import invalidate_annotator
 import json
 from db import Dataset, ModelVersion, TrainingConfig
 from ml_tracking import log_training_run
-from augumentation import ImageAugmentor
 
-def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str, int]:
+def _train_and_save(dataset: Dataset, annotator) -> tuple[str, int]:
     '''общий блок: достаём гиперпараметры, обучаем, считаем метрики, сохраняем версию'''
 
     # достаём гиперпараметры из бд
@@ -13,31 +12,41 @@ def _train_and_save(dataset: Dataset, dataset_name: str, annotator) -> tuple[str
         config = session.query(TrainingConfig).filter(
             TrainingConfig.dataset_id == dataset.id
         ).first()
+        
+        last_version = session.query(ModelVersion).filter(
+            ModelVersion.dataset_id == dataset.id,
+            ModelVersion.is_active == True
+        ).first()
+        last_map = last_version.map50_95 if last_version else 0.0
 
-     # TODO: интеграция аугментации в train flow
-    # augmentor = ImageAugmentor()
-    # augmentor.augment_dataset(images_dir, labels_dir, output_images_dir, output_labels_dir)
-    # нужно согласования структуры папок с фронтом 
+    use_augment = (
+        config.augmentation_enabled and
+        last_map < config.augmentation_threshold
+    ) if config else False
+
 
     if config:
         model_path, version = annotator.train(
-            dataset_name,
+            dataset_path=dataset.path,
             epochs=config.epochs,
             learning_rate=config.learning_rate,
             batch_size=config.batch_size,
             imgsz=config.imgsz,
-            optimizer=config.optimizer
+            optimizer=config.optimizer,
+            augment=use_augment
         )
         used_epochs = config.epochs
+
+        
     else:
-        model_path, version = annotator.train(dataset_name)
+        model_path, version = annotator.train(dataset_path=dataset.path, augment=use_augment)
         used_epochs = 10
 
     # валидация —> считаем метрики
-    metrics = annotator.evaluate(dataset_name)
+    metrics = annotator.evaluate(dataset_path=dataset.path)
 
     run_id = log_training_run(
-        dataset_name=dataset_name,
+        dataset_name=dataset.name,
         architecture=dataset.current_model_architecture,
         hyperparams={
             "epochs": config.epochs if config else used_epochs,

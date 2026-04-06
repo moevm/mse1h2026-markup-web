@@ -4,7 +4,6 @@ from sqlalchemy import select
 from activate import Session
 from db import Base, Dataset, DatasetStatus, TrainingConfig
 from model_registry import get_all_models, get_model_by_id
-from helper import invalidate_annotator
 import os
 from typing import Optional
 from helper import get_annotator, invalidate_annotator
@@ -43,6 +42,11 @@ class TrainingConfigRequest(BaseModel):
     learning_rate: Optional[float] = None
     imgsz: Optional[int] = None
     optimizer: Optional[str] = None
+
+
+class AugmentationConfigRequest(BaseModel):
+    augmentation_enabled: Optional[bool] = None
+    augmentation_threshold: Optional[float] = None
 
 
 @router.get("/api/getDatasets")
@@ -155,11 +159,11 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
     invalidate_annotator(dataset_id)
 
     # если есть размеченные данные — дообучаем новую модель чтобы не терять прогресс
-    labels_dir = os.path.join("datasets", dataset.name, "labels", "train")
+    labels_dir = os.path.join(dataset.path, "labels", "train")
     if os.path.exists(labels_dir) and os.listdir(labels_dir):
         annotator = get_annotator(dataset_id)
         if annotator:
-            _train_and_save(dataset, dataset.name, annotator)
+            _train_and_save(dataset, annotator)
             invalidate_annotator(dataset_id)
 
     return {"status": "ok", "architecture": body.architecture}
@@ -218,18 +222,20 @@ async def update_hyperparams(dataset_id: int, body: TrainingConfigRequest):
 
 @router.get('/api/datasets/{dataset_id}/metrics')
 async def get_metrics(dataset_id: int):
+    '''Эндпоинт для получения метрик всех версий модели для указанного датасета (precision, recall, f1, mAP и т.д.).'''
     with Session() as session:
         dataset = session.get(Dataset, dataset_id)
         if not dataset:
             raise HTTPException(status_code=404, detail="датасет не найден")
         
-
+        # загружаем все версии модели для датасета, отсортированные по возрастанию версии
         model_versions = session.execute(
             select(ModelVersion)
             .where(ModelVersion.dataset_id == dataset_id)
             .order_by(ModelVersion.version.asc())
         ).scalars().all()
 
+        # формируем список метрик каждой версии, десериализуя confusion_matrix из JSON
         return [
         {
             "version": v.version,
@@ -251,12 +257,14 @@ async def get_metrics(dataset_id: int):
     
 @router.get('/api/datasets/{dataset_id}/metrics/latest')
 async def get_curr_metrics(dataset_id: int):
+    '''Эндпоинт для получения метрик текущей активной версии модели для указанного датасета.'''
     with Session() as session:
 
         dataset = session.get(Dataset, dataset_id)
         if not dataset:
             raise HTTPException(status_code=404, detail="датасет не найден")
         
+        # ищем единственную активную версию модели (is_active=True) для датасета
         model_vers_lts = session.execute(
             select(ModelVersion)
             .where(ModelVersion.dataset_id == dataset_id)
@@ -282,3 +290,43 @@ async def get_curr_metrics(dataset_id: int):
             "confusion_matrix": json.loads(v.confusion_matrix_json) if v.confusion_matrix_json else None,
             "mlflow_run_id": v.mlflow_run_id,
 }
+    
+
+
+@router.get("/api/datasets/{dataset_id}/augmentation")
+async def get_augmentation(dataset_id: int):
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        config = session.query(TrainingConfig).filter(TrainingConfig.dataset_id == dataset_id).first()
+        if not config:
+            config = TrainingConfig(dataset_id=dataset_id)
+            session.add(config)
+            session.commit()
+            session.refresh(config)
+        return {
+            "augmentation_enabled": config.augmentation_enabled,
+            "augmentation_threshold": config.augmentation_threshold
+        }
+    
+
+@router.put("/api/datasets/{dataset_id}/augmentation")
+async def update_augmentation(dataset_id: int, body: AugmentationConfigRequest):
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        config = session.query(TrainingConfig).filter(TrainingConfig.dataset_id == dataset_id).first()
+        if not config:
+            config = TrainingConfig(dataset_id=dataset_id)
+            session.add(config)
+            session.commit()
+            session.refresh(config)
+        if body.augmentation_enabled is not None:
+            config.augmentation_enabled = body.augmentation_enabled
+        if body.augmentation_threshold is not None:
+            config.augmentation_threshold = body.augmentation_threshold
+
+        session.commit()
+        return {"status": "ok"}

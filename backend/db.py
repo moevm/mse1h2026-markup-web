@@ -62,3 +62,7 @@ class TrainingConfig(Base):
     learning_rate: Mapped[float] = mapped_column(default=0.001)
     imgsz: Mapped[int] = mapped_column(default=640)
     optimizer: Mapped[str] = mapped_column(String(50), default="AdamW") # будет хранить какой оптимизатор использовался при обучении модели, чтобы потом можно было его восстановить при дообучении модели
+    augmentation_enabled: Mapped[bool] = mapped_column(default=True)
+    augmentation_threshold: Mapped[float] = mapped_column(default=0.85)
+
+
