@@ -31,16 +31,16 @@ class AutoAnnotator:
 
         return annotations
 
-    def save_labels(self, dataset_name: str, filename: str, annotations: list[dict]):
+    def save_labels(self, dataset_path: str, filename: str, annotations: list[dict]):
         '''конвертация координат в ёло формат и сохранение txt формат'''
 
         # размер картинки
-        image_path = os.path.join("datasets", dataset_name, "images", "train", filename)
+        image_path = os.path.join(dataset_path, filename)
         image = Image.open(image_path)
         img_w, img_h = image.size
 
         # папка для меток
-        labels_dir = os.path.join("datasets", dataset_name, "labels", "train")
+        labels_dir = os.path.join(dataset_path, "labels", "train")
         os.makedirs(labels_dir, exist_ok=True)
 
         # нормировка и запись
@@ -53,17 +53,15 @@ class AutoAnnotator:
                 height   = (ann["y2"] - ann["y1"]) / img_h
                 f.write(f"{ann['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
 
-    def train(self, dataset_name: str, epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001, imgsz: int = 640, optimizer: str = "AdamW") -> tuple[str, int]:
+    def train(self, dataset_path: str, epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001, imgsz: int = 640, optimizer: str = "AdamW", augment: bool = False) -> tuple[str, int]:
         '''дообучение модели на размеченных данных'''
-
-        dataset_path = os.path.join("datasets", dataset_name)
 
         # создание yaml конфига
         yaml_path = os.path.join(dataset_path, "dataset.yaml")
         yaml_data = {
             "path":  os.path.abspath(dataset_path),
-            "train": "images/train",
-            "val":   "images/train",
+            "train": ".",
+            "val":   ".",
             "nc":    len(self.model.names),
             "names": list(self.model.names.values()),
         }
@@ -71,7 +69,7 @@ class AutoAnnotator:
             yaml.dump(yaml_data, f)
 
         # запуск обучения - results содержит путь к весам
-        results = self.model.train(data=yaml_path, epochs=epochs, imgsz=imgsz, batch=batch_size, lr0=learning_rate, optimizer=optimizer)
+        results = self.model.train(data=yaml_path, epochs=epochs, imgsz=imgsz, batch=batch_size, lr0=learning_rate, optimizer=optimizer, augment=augment)
 
         # определяем следующую версию модели
         models_dir = os.path.join(dataset_path, "models")
@@ -91,16 +89,15 @@ class AutoAnnotator:
 
         return model_save_path, next_version
 
-    def evaluate(self, dataset_name: str): 
+    def evaluate(self, dataset_path: str): 
         '''оценка модели на валидационном наборе'''
-        dataset_path = os.path.join("datasets", dataset_name)
 
         # создание yaml конфига
         yaml_path = os.path.join(dataset_path, "dataset.yaml")
         yaml_data = {
             "path":  os.path.abspath(dataset_path),
-            "train": "images/train",
-            "val":   "images/train",
+            "train": ".",
+            "val":   ".",
             "nc":    len(self.model.names),
             "names": list(self.model.names.values()),
         }
@@ -122,7 +119,7 @@ class AutoAnnotator:
             f1 = 0.0
 
         # средний IoU  считаем реальный IoU по предсказаниям vs ground truth
-        mean_iou = self._compute_mean_iou(dataset_name)
+        mean_iou = self._compute_mean_iou(dataset_path)
 
         # confusion matrix в JSON
         confusion_matrix = results.confusion_matrix.matrix.tolist()
@@ -137,10 +134,10 @@ class AutoAnnotator:
             "confusion_matrix": confusion_matrix
         }
 
-    def _compute_mean_iou(self, dataset_name: str) -> float:
+    def _compute_mean_iou(self, dataset_path: str) -> float:
         '''вычисление реального mean IoU: предсказания vs ground truth метки'''
-        images_dir = os.path.join("datasets", dataset_name, "images", "train")
-        labels_dir = os.path.join("datasets", dataset_name, "labels", "train")
+        images_dir = dataset_path
+        labels_dir = os.path.join(dataset_path, "labels", "train")
 
         if not os.path.exists(labels_dir):
             return 0.0
