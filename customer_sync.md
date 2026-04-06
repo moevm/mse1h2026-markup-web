@@ -37,3 +37,17 @@
 - **Запись встречи**: [url](https://drive.google.com/file/d/1rQIioaYTIk0In2RoH_WsioGqcCFjMeWO/view?usp=drive_link)
 
 
+## Созвон №3
+- **Дата**:06.04.2026
+- **Тема встречи**: Обсуждение итогов 2 итерации
+- **План встречи**:
+  - Вопросы к заказчику
+  - Вопросы от заказчика
+  - Демонстрация прототипа
+- **Участники**:
+  - Клюканов В.К.
+  - Комаров Д.Е.
+  - Трунов Б.Г.
+- **Запись встречи**: [url](https://drive.google.com/file/d/1F7XPcmsrIfO41u6JkZwKHyUC2GHwFXTb/view?usp=drive_link)
+
+
