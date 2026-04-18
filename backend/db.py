@@ -66,3 +66,15 @@ class TrainingConfig(Base):
     augmentation_threshold: Mapped[float] = mapped_column(default=0.85)
 
 
+class TrainingJob(Base):
+    __tablename__ = "training_job"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("dataset.id"))
+    status: Mapped[str] = mapped_column(String(32))
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    started_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    finished_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    model_version_id: Mapped[Optional[int]] = mapped_column(ForeignKey("model_version.id"), nullable=True)
+
