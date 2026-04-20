@@ -125,19 +125,3 @@ class PredictionBox(Base):
     y1: Mapped[int] = mapped_column()
     x2: Mapped[int] = mapped_column()
     y2: Mapped[int] = mapped_column()
-
-
-class BatchMetrics(Base):
-    __tablename__ = "batch_metrics"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    batch_id: Mapped[int] = mapped_column(ForeignKey("prediction_batch.id"))
-    dataset_id: Mapped[int] = mapped_column(ForeignKey("dataset.id"))
-    model_version_id: Mapped[Optional[int]] = mapped_column(ForeignKey("model_version.id"), nullable=True)
-    precision: Mapped[Optional[float]] = mapped_column(nullable=True)
-    recall: Mapped[Optional[float]] = mapped_column(nullable=True)
-    f1: Mapped[Optional[float]] = mapped_column(nullable=True)
-    mean_iou: Mapped[Optional[float]] = mapped_column(nullable=True)
-    images_count: Mapped[int] = mapped_column(default=0)
-    boxes_count: Mapped[int] = mapped_column(default=0)
-    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))

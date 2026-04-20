@@ -97,8 +97,10 @@ class AutoAnnotator:
         return model_save_path, next_version
 
     def evaluate(self, dataset_path: str, class_names: list[str]):
-        '''продуктовая оценка: class-aware one-to-one matching (без model.val())'''
-        _ = class_names  # контракт метода оставляем, но источник метрик — сравнение predict vs GT
+        """Продуктовая оценка без model.val():
+        class-aware one-to-one matching по текущим GT labels vs текущим predict.
+        Метод оставляем для совместимости пайплайна.
+        """
 
         labels_dir = os.path.join(dataset_path, "labels", "train")
         if not os.path.isdir(labels_dir):
@@ -106,16 +108,17 @@ class AutoAnnotator:
                 "precision": 0.0,
                 "recall": 0.0,
                 "f1": 0.0,
-                "map50": 0.0,
-                "map50_95": 0.0,
+                "map50": 0.0,      # legacy-ключ
+                "map50_95": 0.0,   # legacy-ключ
                 "mean_iou": 0.0,
-                "confusion_matrix": [],
+                "confusion_matrix": [[0 for _ in class_names] for _ in class_names],
             }
 
         total_tp = 0
         total_fp = 0
         total_fn = 0
         matched_ious: list[float] = []
+        confusion_matrix = [[0 for _ in class_names] for _ in class_names]
 
         for label_file in os.listdir(labels_dir):
             if not label_file.lower().endswith(".txt"):
@@ -150,6 +153,13 @@ class AutoAnnotator:
             total_fn += image_metrics["fn"]
             matched_ious.extend(image_metrics["matched_ious"])
 
+            # confusion matrix по matched парам
+            for gt_idx, pred_idx in image_metrics["matches"]:
+                gt_class = gt_boxes[gt_idx]["class_id"]
+                pred_class = pred_boxes[pred_idx]["class_id"]
+                if 0 <= gt_class < len(class_names) and 0 <= pred_class < len(class_names):
+                    confusion_matrix[gt_class][pred_class] += 1
+
         precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
         recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
         f1 = (
@@ -163,11 +173,11 @@ class AutoAnnotator:
             "precision": round(precision, 4),
             "recall": round(recall, 4),
             "f1": round(f1, 4),
-            # Legacy-ключи для совместимости текущего пайплайна сохранения версии модели.
+            # legacy-ключи для совместимости текущего пайплайна
             "map50": round(precision, 4),
             "map50_95": round(mean_iou, 4),
             "mean_iou": round(mean_iou, 4),
-            "confusion_matrix": [],
+            "confusion_matrix": confusion_matrix,
         }
 
     def _read_gt_boxes_px(self, image_path: str, label_path: str) -> list[dict]:
@@ -205,35 +215,49 @@ class AutoAnnotator:
         self,
         pred_boxes: list[dict],
         gt_boxes: list[dict],
-        iou_threshold: float = 0.5
+        iou_threshold: float = 0.5,
     ) -> dict:
         used_gt: set[int] = set()
         tp = 0
         fp = 0
         matched_ious: list[float] = []
+        matches: list[tuple[int, int]] = []
 
-        for pred in pred_boxes:
+        for pred_idx, pred in enumerate(pred_boxes):
             best_gt_idx = -1
             best_iou = 0.0
             pred_tuple = (pred["x1"], pred["y1"], pred["x2"], pred["y2"])
-            for idx, gt in enumerate(gt_boxes):
-                if idx in used_gt or gt["class_id"] != pred["class_id"]:
+
+            for gt_idx, gt in enumerate(gt_boxes):
+                if gt_idx in used_gt:
                     continue
+                if gt["class_id"] != pred["class_id"]:
+                    continue
+
                 gt_tuple = (gt["x1"], gt["y1"], gt["x2"], gt["y2"])
                 iou_value = self._iou(pred_tuple, gt_tuple)
+
                 if iou_value > best_iou:
                     best_iou = iou_value
-                    best_gt_idx = idx
+                    best_gt_idx = gt_idx
 
             if best_gt_idx >= 0 and best_iou >= iou_threshold:
                 used_gt.add(best_gt_idx)
                 tp += 1
                 matched_ious.append(best_iou)
+                matches.append((best_gt_idx, pred_idx))
             else:
                 fp += 1
 
         fn = len(gt_boxes) - len(used_gt)
-        return {"tp": tp, "fp": fp, "fn": fn, "matched_ious": matched_ious}
+
+        return {
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "matched_ious": matched_ious,
+            "matches": matches,
+        }
 
     @staticmethod
     def _iou(box_a: tuple, box_b: tuple) -> float:
