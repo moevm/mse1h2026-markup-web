@@ -1,4 +1,4 @@
-from ultralytics import YOLO
+from ultralytics import YOLO, RTDETR
 from PIL import Image
 import numpy as np
 import yaml
@@ -7,8 +7,12 @@ import shutil
 
 class AutoAnnotator:
     '''модель'''
-    def __init__(self, model_path="yolo11n.pt"):
-        self.model = YOLO(model_path)
+    def __init__(self, model_path="yolo11n.pt", model_type: str = "YOLO"):
+        self.model_type = model_type
+        if self.model_type == "RT-DETR":
+            self.model = RTDETR(model_path)
+        else:
+            self.model = YOLO(model_path)
 
     def predict(self, image_path: str | np.ndarray, conf: float = 0.5):
         '''метод предикт + заданный порог уверенности'''
@@ -53,7 +57,7 @@ class AutoAnnotator:
                 height   = (ann["y2"] - ann["y1"]) / img_h
                 f.write(f"{ann['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
 
-    def train(self, dataset_path: str, epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001, imgsz: int = 640, optimizer: str = "AdamW", augment: bool = False) -> tuple[str, int]:
+    def train(self, dataset_path: str, class_names: list[str], epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001, imgsz: int = 640, optimizer: str = "AdamW", augment: bool = False) -> tuple[str, int]:
         '''дообучение модели на размеченных данных'''
 
         # создание yaml конфига
@@ -62,8 +66,8 @@ class AutoAnnotator:
             "path":  os.path.abspath(dataset_path),
             "train": ".",
             "val":   ".",
-            "nc":    len(self.model.names),
-            "names": list(self.model.names.values()),
+            "nc":    len(class_names),
+            "names": class_names,
         }
         with open(yaml_path, "w") as f:
             yaml.dump(yaml_data, f)
@@ -85,117 +89,175 @@ class AutoAnnotator:
             raise RuntimeError(f"обученные веса не найдены: {trained_weights}")
 
         shutil.copy(trained_weights, model_save_path)
-        self.model = YOLO(model_save_path)
+        if self.model_type == "RT-DETR":
+            self.model = RTDETR(model_save_path)
+        else:
+            self.model = YOLO(model_save_path)
 
         return model_save_path, next_version
 
-    def evaluate(self, dataset_path: str): 
-        '''оценка модели на валидационном наборе'''
+    def evaluate(self, dataset_path: str, class_names: list[str]):
+        """Продуктовая оценка без model.val():
+        class-aware one-to-one matching по текущим GT labels vs текущим predict.
+        Метод оставляем для совместимости пайплайна.
+        """
 
-        # создание yaml конфига
-        yaml_path = os.path.join(dataset_path, "dataset.yaml")
-        yaml_data = {
-            "path":  os.path.abspath(dataset_path),
-            "train": ".",
-            "val":   ".",
-            "nc":    len(self.model.names),
-            "names": list(self.model.names.values()),
-        }
-        with open(yaml_path, "w") as f:
-            yaml.dump(yaml_data, f)
+        labels_dir = os.path.join(dataset_path, "labels", "train")
+        if not os.path.isdir(labels_dir):
+            return {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "map50": 0.0,      # legacy-ключ
+                "map50_95": 0.0,   # legacy-ключ
+                "mean_iou": 0.0,
+                "confusion_matrix": [[0 for _ in class_names] for _ in class_names],
+            }
 
-        # запуск валидации  results содержит путь к весам
-        results = self.model.val(data=yaml_path)
-        # извлекаем метрики
-        precision = float(results.box.mp)    # mean precision по всем классам
-        recall = float(results.box.mr)       # mean recall по всем классам
-        map50 = float(results.box.map50)     # mAP@50
-        map50_95 = float(results.box.map)    # mAP@50:95
+        total_tp = 0
+        total_fp = 0
+        total_fn = 0
+        matched_ious: list[float] = []
+        confusion_matrix = [[0 for _ in class_names] for _ in class_names]
 
-        # F1 считаем вручную
-        if precision + recall > 0:
-            f1 = 2 * precision * recall / (precision + recall)
-        else:
-            f1 = 0.0
+        for label_file in os.listdir(labels_dir):
+            if not label_file.lower().endswith(".txt"):
+                continue
 
-        # средний IoU  считаем реальный IoU по предсказаниям vs ground truth
-        mean_iou = self._compute_mean_iou(dataset_path)
+            stem = os.path.splitext(label_file)[0]
+            image_path = None
+            for ext in (".jpg", ".jpeg", ".png"):
+                candidate = os.path.join(dataset_path, f"{stem}{ext}")
+                if os.path.exists(candidate):
+                    image_path = candidate
+                    break
+            if not image_path:
+                continue
 
-        # confusion matrix в JSON
-        confusion_matrix = results.confusion_matrix.matrix.tolist()
+            label_path = os.path.join(labels_dir, label_file)
+            gt_boxes = self._read_gt_boxes_px(image_path, label_path)
+            pred_boxes = [
+                {
+                    "class_id": int(pred["class_id"]),
+                    "x1": float(pred["x1"]),
+                    "y1": float(pred["y1"]),
+                    "x2": float(pred["x2"]),
+                    "y2": float(pred["y2"]),
+                }
+                for pred in self.predict(image_path, conf=0.25)
+            ]
+
+            image_metrics = self._match_image_boxes(pred_boxes, gt_boxes)
+            total_tp += image_metrics["tp"]
+            total_fp += image_metrics["fp"]
+            total_fn += image_metrics["fn"]
+            matched_ious.extend(image_metrics["matched_ious"])
+
+            # confusion matrix по matched парам
+            for gt_idx, pred_idx in image_metrics["matches"]:
+                gt_class = gt_boxes[gt_idx]["class_id"]
+                pred_class = pred_boxes[pred_idx]["class_id"]
+                if 0 <= gt_class < len(class_names) and 0 <= pred_class < len(class_names):
+                    confusion_matrix[gt_class][pred_class] += 1
+
+        precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
+        recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
+        mean_iou = sum(matched_ious) / len(matched_ious) if matched_ious else 0.0
 
         return {
             "precision": round(precision, 4),
             "recall": round(recall, 4),
             "f1": round(f1, 4),
-            "map50": round(map50, 4),
-            "map50_95": round(map50_95, 4),
+            # legacy-ключи для совместимости текущего пайплайна
+            "map50": round(precision, 4),
+            "map50_95": round(mean_iou, 4),
             "mean_iou": round(mean_iou, 4),
-            "confusion_matrix": confusion_matrix
+            "confusion_matrix": confusion_matrix,
         }
 
-    def _compute_mean_iou(self, dataset_path: str) -> float:
-        '''вычисление реального mean IoU: предсказания vs ground truth метки'''
-        images_dir = dataset_path
-        labels_dir = os.path.join(dataset_path, "labels", "train")
+    def _read_gt_boxes_px(self, image_path: str, label_path: str) -> list[dict]:
+        with Image.open(image_path) as image:
+            img_w, img_h = image.size
 
-        if not os.path.exists(labels_dir):
-            return 0.0
-
-        all_ious = []
-        for label_file in os.listdir(labels_dir):
-            if not label_file.endswith(".txt"):
-                continue
-
-            # читаем ground truth в формате YOLO (нормализованные координаты)
-            label_path = os.path.join(labels_dir, label_file)
-            gt_boxes = []
-            with open(label_path, "r") as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if len(parts) < 5:
-                        continue
+        gt_boxes: list[dict] = []
+        with open(label_path, "r") as file:
+            for raw_line in file:
+                parts = raw_line.strip().split()
+                if len(parts) < 5:
+                    continue
+                try:
+                    class_id = int(parts[0])
                     xc, yc, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
-                    gt_boxes.append((xc - w / 2, yc - h / 2, xc + w / 2, yc + h / 2))
+                except ValueError:
+                    continue
 
-            if not gt_boxes:
-                continue
+                x1 = (xc - w / 2) * img_w
+                y1 = (yc - h / 2) * img_h
+                x2 = (xc + w / 2) * img_w
+                y2 = (yc + h / 2) * img_h
+                gt_boxes.append(
+                    {
+                        "class_id": class_id,
+                        "x1": x1,
+                        "y1": y1,
+                        "x2": x2,
+                        "y2": y2,
+                    }
+                )
+        return gt_boxes
 
-            # находим соответствующее изображение
-            image_name = None
-            for ext in ('.jpg', '.jpeg', '.png'):
-                candidate = os.path.splitext(label_file)[0] + ext
-                if os.path.exists(os.path.join(images_dir, candidate)):
-                    image_name = candidate
-                    break
-            if not image_name:
-                continue
+    def _match_image_boxes(
+        self,
+        pred_boxes: list[dict],
+        gt_boxes: list[dict],
+        iou_threshold: float = 0.5,
+    ) -> dict:
+        used_gt: set[int] = set()
+        tp = 0
+        fp = 0
+        matched_ious: list[float] = []
+        matches: list[tuple[int, int]] = []
 
-            image_path = os.path.join(images_dir, image_name)
-            img = Image.open(image_path)
-            img_w, img_h = img.size
+        for pred_idx, pred in enumerate(pred_boxes):
+            best_gt_idx = -1
+            best_iou = 0.0
+            pred_tuple = (pred["x1"], pred["y1"], pred["x2"], pred["y2"])
 
-            # предсказания модели
-            preds = self.predict(image_path, conf=0.25)
-            if not preds:
-                continue
+            for gt_idx, gt in enumerate(gt_boxes):
+                if gt_idx in used_gt:
+                    continue
+                if gt["class_id"] != pred["class_id"]:
+                    continue
 
-            # нормализуем предсказания
-            pred_boxes = [
-                (p["x1"] / img_w, p["y1"] / img_h, p["x2"] / img_w, p["y2"] / img_h)
-                for p in preds
-            ]
+                gt_tuple = (gt["x1"], gt["y1"], gt["x2"], gt["y2"])
+                iou_value = self._iou(pred_tuple, gt_tuple)
 
-            # для каждого GT бокса находим лучший pred по IoU
-            for gt in gt_boxes:
-                best_iou = 0.0
-                for pred in pred_boxes:
-                    iou = self._iou(gt, pred)
-                    if iou > best_iou:
-                        best_iou = iou
-                all_ious.append(best_iou)
+                if iou_value > best_iou:
+                    best_iou = iou_value
+                    best_gt_idx = gt_idx
 
-        return sum(all_ious) / len(all_ious) if all_ious else 0.0
+            if best_gt_idx >= 0 and best_iou >= iou_threshold:
+                used_gt.add(best_gt_idx)
+                tp += 1
+                matched_ious.append(best_iou)
+                matches.append((best_gt_idx, pred_idx))
+            else:
+                fp += 1
+
+        fn = len(gt_boxes) - len(used_gt)
+
+        return {
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "matched_ious": matched_ious,
+            "matches": matches,
+        }
 
     @staticmethod
     def _iou(box_a: tuple, box_b: tuple) -> float:

@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db import Base, DatasetStatus
+from db import Base, DatasetStatus, TrainingJob
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -21,6 +22,8 @@ def create_db_tables():
     Base.metadata.create_all(engine)
 
     with Session() as session:
+        has_changes = False
+
         if session.query(DatasetStatus).count() == 0:
             statuses = [
                 DatasetStatus(id=0, name="Just load"),
@@ -29,6 +32,22 @@ def create_db_tables():
                 DatasetStatus(id=3, name="At work"),
             ]
             session.add_all(statuses)
+            has_changes = True
+
+        interrupted_jobs = (
+            session.query(TrainingJob)
+            .filter(TrainingJob.status == "running")
+            .all()
+        )
+        if interrupted_jobs:
+            now = datetime.now(timezone.utc)
+            for job in interrupted_jobs:
+                job.status = "failed"
+                job.error = "interrupted by server restart"
+                job.finished_at = now
+            has_changes = True
+
+        if has_changes:
             session.commit()
 
 
@@ -38,5 +57,4 @@ def get_session():
         yield session
     finally:
         session.close()
-
 

@@ -3,6 +3,7 @@ from activate import Session
 from annotator import AutoAnnotator
 from typing import Optional
 from sqlalchemy import desc
+from model_registry import get_model_by_id
 
 # dataset_id -> экземпляр AutoAnnotator
 _annotators: dict[int, AutoAnnotator] = {}
@@ -37,9 +38,21 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
 
         # 4. если есть обученная — грузим её веса, если нет — берём pretrained
         if last_model and last_model.path:
-            annotator = AutoAnnotator(model_path=last_model.path)
+            model_info = get_model_by_id(last_model.architecture)
+            if not model_info:
+                return None
+            annotator = AutoAnnotator(
+                model_path=last_model.path,
+                model_type=model_info["type"]
+            )
         else:
-            annotator = AutoAnnotator(model_path=architecture + ".pt")
+            model_info = get_model_by_id(architecture)
+            if not model_info:
+                return None
+            annotator = AutoAnnotator(
+                model_path=model_info["weights"],
+                model_type=model_info["type"]
+            )
 
         # 5. кладём в кеш
         _annotators[dataset_id] = annotator
