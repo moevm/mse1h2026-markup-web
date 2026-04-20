@@ -1,15 +1,25 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from activate import Session
-from db import Base, Dataset, DatasetStatus, TrainingConfig
+from db import (
+    DatasetImage,
+    Dataset,
+    DatasetStatus,
+    ModelVersion,
+    PredictionBatch,
+    PredictionBox,
+    TrainingConfig,
+    TrainingJob,
+)
 from model_registry import get_all_models, get_model_by_id
 import os
 from typing import Optional
+from job_runner import submit_training_job
 from helper import get_annotator, invalidate_annotator
-from training import _train_and_save
-from db import ModelVersion
 import json
+from urllib.parse import quote
 
 DATASETS_ROOT_HOST = "C:/"
 DATASETS_ROOT_CONTAINER = "/host_c"
@@ -23,6 +33,58 @@ def resolve_container_path(user_path: str) -> str:
     
     relative = user_path[len(host_root):].lstrip("/")
     return os.path.join(DATASETS_ROOT_CONTAINER, relative)
+
+
+def dataset_has_labels(dataset_path: str) -> bool:
+    labels_dir = os.path.join(dataset_path, "labels", "train")
+    if not os.path.isdir(labels_dir):
+        return False
+
+    for _, _, files in os.walk(labels_dir):
+        for filename in files:
+            if filename.lower().endswith(".txt"):
+                return True
+    return False
+
+
+def list_dataset_images(dataset_path: str) -> list[str]:
+    if not os.path.isdir(dataset_path):
+        return []
+
+    return sorted(
+        [
+            filename
+            for filename in os.listdir(dataset_path)
+            if filename.lower().endswith((".jpg", ".jpeg", ".png"))
+            and os.path.isfile(os.path.join(dataset_path, filename))
+        ]
+    )
+
+
+def select_batch_images_by_status(session, dataset_id: int, dataset_path: str, limit: int) -> list[str]:
+    image_filenames = list_dataset_images(dataset_path)
+    if not image_filenames:
+        return []
+
+    existing_rows = (
+        session.query(DatasetImage)
+        .filter(
+            DatasetImage.dataset_id == dataset_id,
+            DatasetImage.filename.in_(image_filenames)
+        )
+        .all()
+    )
+    status_by_filename = {row.filename: row.status for row in existing_rows}
+    eligible_statuses = {"unlabeled", "auto_labeled_pending_review"}
+
+    selected = [
+        filename
+        for filename in image_filenames
+        if filename not in status_by_filename
+        or status_by_filename[filename] in eligible_statuses
+    ]
+    return selected[:limit]
+
 
 router = APIRouter()
 
@@ -68,7 +130,13 @@ async def get_datasets():
                 "inwork_size": ds.inwork_size,
                 "path": ds.path,
                 "average_percent_success": ds.average_percent_success,
-                "current_model_architecture": ds.current_model_architecture
+                "current_model_architecture": ds.current_model_architecture,
+                "metric_precision": ds.metric_precision,
+                "metric_recall": ds.metric_recall,
+                "metric_f1": ds.metric_f1,
+                "metric_mean_iou": ds.metric_mean_iou,
+                "metrics_boxes_total": ds.metrics_boxes_total,
+                "metrics_images_total": ds.metrics_images_total,
             })
         return result
 
@@ -118,7 +186,13 @@ async def add_dataset(body: AddDatasetRequest):
             "inwork_size": 0,
             "path": dataset.path,
             "average_percent_success": None,
-            "current_model_architecture": dataset.current_model_architecture
+            "current_model_architecture": dataset.current_model_architecture,
+            "metric_precision": dataset.metric_precision,
+            "metric_recall": dataset.metric_recall,
+            "metric_f1": dataset.metric_f1,
+            "metric_mean_iou": dataset.metric_mean_iou,
+            "metrics_boxes_total": dataset.metrics_boxes_total,
+            "metrics_images_total": dataset.metrics_images_total,
         }
 
 @router.get("/api/models")
@@ -137,36 +211,262 @@ async def get_current_model(dataset_id: int):
         return {"architecture": dataset.current_model_architecture}
 
 
+@router.get("/api/datasets/{dataset_id}/next-batch")
+def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+
+        active_batch = (
+            session.query(PredictionBatch)
+            .filter(
+                PredictionBatch.dataset_id == dataset_id,
+                PredictionBatch.status == "active"
+            )
+            .first()
+        )
+        if active_batch:
+            raise HTTPException(
+                status_code=409,
+                detail="для этого датасета уже есть активный batch"
+            )
+
+        dataset_name = dataset.name
+        dataset_path = dataset.path
+        architecture = dataset.current_model_architecture
+
+        active_model = (
+            session.query(ModelVersion)
+            .filter(
+                ModelVersion.dataset_id == dataset_id,
+                ModelVersion.is_active == True
+            )
+            .order_by(ModelVersion.version.desc())
+            .first()
+        )
+        model_version_id = active_model.id if active_model else None
+
+    if not os.path.exists(dataset_path):
+        raise HTTPException(
+            status_code=404, detail=f"изображения датасета {dataset_name} не найдены"
+        )
+
+    annotator = get_annotator(dataset_id)
+    if not annotator:
+        raise HTTPException(status_code=500, detail="не удалось загрузить модель")
+
+    with Session() as session:
+        image_filenames = select_batch_images_by_status(
+            session=session,
+            dataset_id=dataset_id,
+            dataset_path=dataset_path,
+            limit=limit,
+        )
+    if not image_filenames:
+        raise HTTPException(status_code=404, detail="в датасете нет изображений для batch")
+
+    images_payload = []
+    snapshot_boxes: list[dict] = []
+    for filename in image_filenames:
+        image_path = os.path.join(dataset_path, filename)
+        boxes = annotator.predict(image_path)
+
+        response_boxes = []
+        for box in boxes:
+            normalized_box = {
+                "class_id": int(box["class_id"]),
+                "class_name": box["class_name"],
+                "confidence": float(box["confidence"]),
+                "x1": int(box["x1"]),
+                "y1": int(box["y1"]),
+                "x2": int(box["x2"]),
+                "y2": int(box["y2"]),
+            }
+            response_boxes.append(normalized_box)
+            snapshot_boxes.append(
+                {
+                    "image_filename": filename,
+                    "class_id": normalized_box["class_id"],
+                    "confidence": normalized_box["confidence"],
+                    "x1": normalized_box["x1"],
+                    "y1": normalized_box["y1"],
+                    "x2": normalized_box["x2"],
+                    "y2": normalized_box["y2"],
+                }
+            )
+
+        images_payload.append(
+            {
+                "filename": filename,
+                "image_url": f"/api/datasets/{dataset_name}/images/{quote(filename)}",
+                "boxes": response_boxes,
+            }
+        )
+
+    with Session() as session:
+        session.query(Dataset).filter(Dataset.id == dataset_id).with_for_update().first()
+        active_batch_race = (
+            session.query(PredictionBatch)
+            .filter(
+                PredictionBatch.dataset_id == dataset_id,
+                PredictionBatch.status == "active"
+            )
+            .first()
+        )
+        if active_batch_race:
+            raise HTTPException(
+                status_code=409,
+                detail="для этого датасета уже есть активный batch"
+            )
+
+        existing_images = {
+            row.filename: row
+            for row in session.query(DatasetImage).filter(
+                DatasetImage.dataset_id == dataset_id,
+                DatasetImage.filename.in_(image_filenames)
+            ).all()
+        }
+
+        for filename in image_filenames:
+            image_path = os.path.join(dataset_path, filename)
+            label_path = os.path.join(
+                dataset_path,
+                "labels",
+                "train",
+                os.path.splitext(filename)[0] + ".txt"
+            )
+            row = existing_images.get(filename)
+            if row:
+                row.image_path = image_path
+                row.label_path = label_path
+                if row.status == "unlabeled":
+                    row.status = "auto_labeled_pending_review"
+            else:
+                session.add(
+                    DatasetImage(
+                        dataset_id=dataset_id,
+                        filename=filename,
+                        image_path=image_path,
+                        label_path=label_path,
+                        status="auto_labeled_pending_review",
+                    )
+                )
+
+        batch = PredictionBatch(
+            dataset_id=dataset_id,
+            model_version_id=model_version_id,
+            architecture=architecture,
+            status="active",
+            image_filenames_json=json.dumps(image_filenames),
+        )
+        session.add(batch)
+        session.flush()
+
+        for box in snapshot_boxes:
+            session.add(
+                PredictionBox(
+                    batch_id=batch.id,
+                    image_filename=box["image_filename"],
+                    class_id=box["class_id"],
+                    confidence=box["confidence"],
+                    x1=box["x1"],
+                    y1=box["y1"],
+                    x2=box["x2"],
+                    y2=box["y2"],
+                )
+            )
+
+        session.commit()
+        batch_id = batch.id
+
+    return {
+        "batch_id": batch_id,
+        "dataset_id": dataset_id,
+        "images": images_payload,
+    }
+
+
 @router.post("/api/datasets/{dataset_id}/model")
 async def change_model(dataset_id: int, body: ChangeModelRequest):
-    '''сменить архитектуру модели для датасета'''
+    '''запланировать смену архитектуры модели для датасета через retrain в очереди'''
 
     # проверяем что такая модель существует в реестре
     model_info = get_model_by_id(body.architecture)
     if not model_info:
         raise HTTPException(status_code=400, detail=f"неизвестная архитектура: {body.architecture}")
 
-    # обновляем в бд
+    job_id = None
+    has_labels = False
     with Session() as session:
-        dataset = session.get(Dataset, dataset_id)
+        dataset = (
+            session.query(Dataset)
+            .filter(Dataset.id == dataset_id)
+            .with_for_update()
+            .first()
+        )
         if not dataset:
             raise HTTPException(status_code=404, detail="датасет не найден")
-        dataset.current_model_architecture = body.architecture
-        session.expunge(dataset)
-        session.commit()
 
-    # сбрасываем кеш чтобы следующий predict загрузил новую модель
-    invalidate_annotator(dataset_id)
+        active_job = (
+            session.query(TrainingJob)
+            .filter(
+                TrainingJob.dataset_id == dataset.id,
+                TrainingJob.status.in_(["queued", "running"])
+            )
+            .first()
+        )
+        if active_job:
+            raise HTTPException(
+                status_code=409,
+                detail="для датасета уже выполняется training job"
+            )
 
-    # если есть размеченные данные — дообучаем новую модель чтобы не терять прогресс
-    labels_dir = os.path.join(dataset.path, "labels", "train")
-    if os.path.exists(labels_dir) and os.listdir(labels_dir):
-        annotator = get_annotator(dataset_id)
-        if annotator:
-            _train_and_save(dataset, annotator)
+        if (
+            body.architecture == dataset.current_model_architecture
+            and dataset.pending_model_architecture is None
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="архитектура уже активна для этого датасета"
+            )
+
+        has_labels = dataset_has_labels(dataset.path)
+        if not has_labels:
+            dataset.current_model_architecture = body.architecture
+            dataset.pending_model_architecture = None
+            session.commit()
             invalidate_annotator(dataset_id)
+            return {"status": "ok", "architecture": body.architecture}
 
-    return {"status": "ok", "architecture": body.architecture}
+        dataset.pending_model_architecture = body.architecture
+
+        job = TrainingJob(
+            dataset_id=dataset.id,
+            status="queued",
+            job_type="change_model_retrain"
+        )
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+        job_id = job.id
+
+    try:
+        submit_training_job(job_id)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="не удалось поставить retrain смены архитектуры в очередь"
+        )
+
+    return JSONResponse(
+        status_code=202,
+        content={
+            "job_id": job_id,
+            "status": "queued",
+            "target_architecture": body.architecture
+        }
+    )
 
 
 
