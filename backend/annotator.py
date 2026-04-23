@@ -40,8 +40,8 @@ class AutoAnnotator:
 
         # размер картинки
         image_path = os.path.join(dataset_path, filename)
-        image = Image.open(image_path)
-        img_w, img_h = image.size
+        with Image.open(image_path) as image:
+            img_w, img_h = image.size
 
         # папка для меток
         labels_dir = os.path.join(dataset_path, "labels", "train")

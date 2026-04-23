@@ -1,35 +1,48 @@
 let detections = [
   {
     id: 1,
+    class_id: 0,
     label: "Машина",
     cls: "red",
     conf: 0.98,
-    x: 33,
-    y: 10,
-    w: 18,
-    h: 45,
+    x1: 330,
+    y1: 80,
+    x2: 510,
+    y2: 440,
   },
   {
     id: 2,
+    class_id: 1,
     label: "Человек",
     cls: "green",
     conf: 0.45,
-    x: 8,
-    y: 35,
-    w: 14,
-    h: 35,
+    x1: 80,
+    y1: 280,
+    x2: 220,
+    y2: 560,
   },
   {
     id: 3,
+    class_id: 0,
     label: "Машина",
     cls: "blue",
     conf: 0.91,
-    x: 55,
-    y: 50,
-    w: 12,
-    h: 18,
+    x1: 550,
+    y1: 400,
+    x2: 670,
+    y2: 544,
   },
-  { id: 4, label: "Машина", cls: "red", conf: 0.87, x: 42, y: 55, w: 8, h: 14 },
+  {
+    id: 4,
+    class_id: 0,
+    label: "Машина",
+    cls: "red",
+    conf: 0.87,
+    x1: 420,
+    y1: 440,
+    x2: 500,
+    y2: 552,
+  },
 ];
 
 let nextId = 10;
@@ -61,9 +74,14 @@ function sceneRect() {
   return scene.getBoundingClientRect();
 }
 
-function toPercent(px, dir) {
+function pxToPercentX(px) {
   const r = sceneRect();
-  return dir === "x" ? (px / r.width) * 100 : (px / r.height) * 100;
+  return r.width > 0 ? (px / r.width) * 100 : 0;
+}
+
+function pxToPercentY(px) {
+  const r = sceneRect();
+  return r.height > 0 ? (px / r.height) * 100 : 0;
 }
 
 function clamp(v, lo, hi) {
@@ -140,11 +158,15 @@ function refreshBbox(id) {
   if (!el || !d) return;
 
   el.dataset.class = d.cls;
+
+  const widthPx = d.x2 - d.x1;
+  const heightPx = d.y2 - d.y1;
+
   Object.assign(el.style, {
-    left: d.x + "%",
-    top: d.y + "%",
-    width: d.w + "%",
-    height: d.h + "%",
+    left: pxToPercentX(d.x1) + "%",
+    top: pxToPercentY(d.y1) + "%",
+    width: pxToPercentX(widthPx) + "%",
+    height: pxToPercentY(heightPx) + "%",
   });
 
   el.querySelector(".bbox__label").textContent =
@@ -165,7 +187,6 @@ function selectBbox(id) {
   deselectAll();
   selectedId = id;
   layer.querySelector(`[data-id="${id}"]`)?.classList.add("selected");
-  const d = getDetection(id);
 }
 
 function deselectAll() {
@@ -189,11 +210,11 @@ function startMove(e, id) {
   const d = getDetection(id);
   dragState = {
     type: "move",
-    id,
+    id: d.id,
     startMx: e.clientX,
     startMy: e.clientY,
-    startX: d.x,
-    startY: d.y,
+    startX1: d.x1,
+    startY1: d.y1,
   };
   document.body.style.cursor = "move";
 }
@@ -206,10 +227,10 @@ function startResize(e, id, dir) {
     dir,
     startMx: e.clientX,
     startMy: e.clientY,
-    startX: d.x,
-    startY: d.y,
-    startW: d.w,
-    startH: d.h,
+    startX1: d.x1,
+    startY1: d.y1,
+    startX2: d.x2,
+    startY2: d.y2,
   };
   document.body.style.cursor = e.target.style.cursor;
 }
@@ -227,8 +248,8 @@ scene.addEventListener("mousedown", (e) => {
     const { px, py } = getRelPos(e);
     ghost = document.createElement("div");
     ghost.className = "draw-ghost";
-    ghost.style.left = toPercent(px, "x") + "%";
-    ghost.style.top = toPercent(py, "y") + "%";
+    ghost.style.left = pxToPercentX(px) + "%";
+    ghost.style.top = pxToPercentY(py) + "%";
     ghost.style.width = "0";
     ghost.style.height = "0";
     layer.appendChild(ghost);
@@ -240,44 +261,71 @@ scene.addEventListener("mousedown", (e) => {
 
 document.addEventListener("mousemove", (e) => {
   if (dragState?.type === "move") {
-    const r = sceneRect();
-    const dx = ((e.clientX - dragState.startMx) / r.width) * 100;
-    const dy = ((e.clientY - dragState.startMy) / r.height) * 100;
-    const d = getDetection(dragState.id);
-    updateDetection(dragState.id, {
-      x: clamp(dragState.startX + dx, 0, 100 - d.w),
-      y: clamp(dragState.startY + dy, 0, 100 - d.h),
-    });
-    return;
-  }
+  const r = sceneRect();
+  const dx = e.clientX - dragState.startMx;
+  const dy = e.clientY - dragState.startMy;
+
+  const d = getDetection(dragState.id);
+  const boxW = d.x2 - d.x1;
+  const boxH = d.y2 - d.y1;
+
+  let nx1 = dragState.startX1 + dx;
+  let ny1 = dragState.startY1 + dy;
+
+  nx1 = clamp(nx1, 0, r.width - boxW);
+  ny1 = clamp(ny1, 0, r.height - boxH);
+
+  updateDetection(dragState.id, {
+    x1: nx1,
+    y1: ny1,
+    x2: nx1 + boxW,
+    y2: ny1 + boxH,
+  });
+
+  return;
+}
 
   if (dragState?.type === "resize") {
-    const r = sceneRect();
-    const dx = ((e.clientX - dragState.startMx) / r.width) * 100;
-    const dy = ((e.clientY - dragState.startMy) / r.height) * 100;
-    const dir = dragState.dir;
-    let { startX: nx, startY: ny, startW: nw, startH: nh } = dragState;
-    const MIN = 2;
+  const r = sceneRect();
+  const dx = e.clientX - dragState.startMx;
+  const dy = e.clientY - dragState.startMy;
+  const dir = dragState.dir;
 
-    if (dir.includes("e")) nw = Math.max(MIN, dragState.startW + dx);
-    if (dir.includes("s")) nh = Math.max(MIN, dragState.startH + dy);
-    if (dir.includes("w")) {
-      nw = Math.max(MIN, dragState.startW - dx);
-      nx = dragState.startX + dragState.startW - nw;
-    }
-    if (dir.includes("n")) {
-      nh = Math.max(MIN, dragState.startH - dy);
-      ny = dragState.startY + dragState.startH - nh;
-    }
+  let x1 = dragState.startX1;
+  let y1 = dragState.startY1;
+  let x2 = dragState.startX2;
+  let y2 = dragState.startY2;
 
-    updateDetection(dragState.id, {
-      x: clamp(nx, 0, 100),
-      y: clamp(ny, 0, 100),
-      w: Math.min(nw, 100 - nx),
-      h: Math.min(nh, 100 - ny),
-    });
-    return;
+  const MIN = 8;
+
+  if (dir.includes("e")) x2 = dragState.startX2 + dx;
+  if (dir.includes("s")) y2 = dragState.startY2 + dy;
+  if (dir.includes("w")) x1 = dragState.startX1 + dx;
+  if (dir.includes("n")) y1 = dragState.startY1 + dy;
+
+  x1 = clamp(x1, 0, r.width);
+  y1 = clamp(y1, 0, r.height);
+  x2 = clamp(x2, 0, r.width);
+  y2 = clamp(y2, 0, r.height);
+
+  if (x2 - x1 < MIN) {
+    if (dir.includes("w")) x1 = x2 - MIN;
+    else x2 = x1 + MIN;
   }
+
+  if (y2 - y1 < MIN) {
+    if (dir.includes("n")) y1 = y2 - MIN;
+    else y2 = y1 + MIN;
+  }
+
+  x1 = clamp(x1, 0, r.width);
+  y1 = clamp(y1, 0, r.height);
+  x2 = clamp(x2, 0, r.width);
+  y2 = clamp(y2, 0, r.height);
+
+  updateDetection(dragState.id, { x1, y1, x2, y2 });
+  return;
+}
 
   if (drawState && ghost) {
     const { px, py } = getRelPos(e);
@@ -285,12 +333,12 @@ document.addEventListener("mousemove", (e) => {
     const y0 = Math.min(drawState.startPy, py);
     const w = Math.abs(px - drawState.startPx);
     const h = Math.abs(py - drawState.startPy);
-    const r = sceneRect();
-    ghost.style.left = (x0 / r.width) * 100 + "%";
-    ghost.style.top = (y0 / r.height) * 100 + "%";
-    ghost.style.width = (w / r.width) * 100 + "%";
-    ghost.style.height = (h / r.height) * 100 + "%";
-  }
+
+    ghost.style.left = pxToPercentX(x0) + "%";
+    ghost.style.top = pxToPercentY(y0) + "%";
+    ghost.style.width = pxToPercentX(w) + "%";
+    ghost.style.height = pxToPercentY(h) + "%";
+}
 });
 
 document.addEventListener("mouseup", (e) => {
@@ -302,27 +350,31 @@ document.addEventListener("mouseup", (e) => {
   }
 
   if (drawState && ghost) {
-    const r = sceneRect();
-    const x0 = parseFloat(ghost.style.left);
-    const y0 = parseFloat(ghost.style.top);
-    const w = parseFloat(ghost.style.width);
-    const h = parseFloat(ghost.style.height);
+    const { px, py } = getRelPos(e);
+
+    const x1 = Math.min(drawState.startPx, px);
+    const y1 = Math.min(drawState.startPy, py);
+    const x2 = Math.max(drawState.startPx, px);
+    const y2 = Math.max(drawState.startPy, py);
+
     ghost.remove();
     ghost = null;
     drawState = null;
 
-    if (w < 1 || h < 1) return;
+    if (x2 - x1 < 8 || y2 - y1 < 8) return;
 
     const newDet = {
       id: nextId++,
+      class_id: 0,
       label: "Объект",
       cls: "green",
       conf: 1.0,
-      x: x0,
-      y: y0,
-      w,
-      h,
+      x1,
+      y1,
+      x2,
+      y2,
     };
+
     detections.push(newDet);
     createBboxEl(newDet);
     refreshBbox(newDet.id);
@@ -363,16 +415,23 @@ function openPopup(id, cx, cy) {
   popup.style.top = Math.min(cy + 10, window.innerHeight - ph - 10) + "px";
 
   const handler = () => {
+    const r = sceneRect();
+
+    const x1 = clamp(parseFloat(popX.value) || 0, 0, r.width);
+    const y1 = clamp(parseFloat(popY.value) || 0, 0, r.height);
+    const w = Math.max(1, parseFloat(popW.value) || 1);
+    const h = Math.max(1, parseFloat(popH.value) || 1);
+
     updateDetection(id, {
       label: popLabel.value || "Объект",
       cls: popClass.value,
       conf: clamp(parseFloat(popConf.value) || 1, 0, 1),
-      x: clamp(parseFloat(popX.value) || 0, 0, 100),
-      y: clamp(parseFloat(popY.value) || 0, 0, 100),
-      w: clamp(parseFloat(popW.value) || 1, 0.5, 100),
-      h: clamp(parseFloat(popH.value) || 1, 0.5, 100),
-    });
-  };
+      x1,
+      y1,
+      x2: clamp(x1 + w, 0, r.width),
+      y2: clamp(y1 + h, 0, r.height),
+  });
+};
 
   [popLabel, popClass, popConf, popX, popY, popW, popH].forEach((el) => {
     el.removeEventListener("input", el._handler);
@@ -385,10 +444,10 @@ function syncPopup(d) {
   popLabel.value = d.label;
   popClass.value = d.cls;
   popConf.value = d.conf.toFixed(2);
-  popX.value = d.x.toFixed(1);
-  popY.value = d.y.toFixed(1);
-  popW.value = d.w.toFixed(1);
-  popH.value = d.h.toFixed(1);
+  popX.value = d.x1.toFixed(0);
+  popY.value = d.y1.toFixed(0);
+  popW.value = (d.x2 - d.x1).toFixed(0);
+  popH.value = (d.y2 - d.y1).toFixed(0);
 }
 
 function closePopup() {
@@ -403,10 +462,25 @@ btnDelSel.addEventListener("click", () => {
 
 window.DetectionOverlay = {
   load(data) {
-    detections = data;
-    nextId = Math.max(...data.map((d) => d.id)) + 1;
-    renderAll();
-  },
+    detections = data.map((d, index) => ({
+      id: d.id ?? index + 1,
+      class_id: d.class_id ?? 0,
+      label: d.label ?? "Объект",
+      cls: d.cls ?? "green",
+      conf: d.conf ?? 1,
+      x1: d.x1,
+      y1: d.y1,
+      x2: d.x2,
+      y2: d.y2,
+  }));
+
+  nextId =
+    detections.length > 0
+      ? Math.max(...detections.map((d) => d.id)) + 1
+      : 1;
+
+  renderAll();
+},
   hide(id) {
     layer.querySelector(`[data-id="${id}"]`)?.classList.add("hidden");
   },

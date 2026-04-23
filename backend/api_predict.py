@@ -506,8 +506,8 @@ async def predict(dataset_name: str, filename: str):
     Возвращает список bounding boxes с метками и координатами.
     """
     dataset = get_dataset_by_name(dataset_name)
-    annotator = get_annotator(dataset.id)
 
+    annotator = get_annotator(dataset.id)
     if not annotator:
         raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
@@ -518,18 +518,17 @@ async def predict(dataset_name: str, filename: str):
         raise HTTPException(status_code=404, detail="файл не найден")
 
     boxes = annotator.predict(image_path)
-    with Image.open(image_path) as img:
-        img_w, img_h = img.size
 
     return [
         {
             "id": i,
+            "class_id": b["class_id"],
             "label": b["class_name"],
             "conf": b["confidence"],
-            "x": b["x1"] / img_w * 100,
-            "y": b["y1"] / img_h * 100,
-            "w": (b["x2"] - b["x1"]) / img_w * 100,
-            "h": (b["y2"] - b["y1"]) / img_h * 100,
+            "x1": int(b["x1"]),
+            "y1": int(b["y1"]),
+            "x2": int(b["x2"]),
+            "y2": int(b["y2"]),
         }
         for i, b in enumerate(boxes)
     ]
