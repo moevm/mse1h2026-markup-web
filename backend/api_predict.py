@@ -20,7 +20,6 @@ from PIL import Image
 router = APIRouter()
 
 
-# Модели запроса
 class AnnotationItem(BaseModel):
     class_id: int
     x1: int
@@ -35,7 +34,6 @@ class LabeledImage(BaseModel):
 
 
 def get_dataset_by_name(dataset_name: str) -> Dataset:
-    """Получение объекта датасета из БД по имени. Выбрасывает 404, если датасет не найден."""
     with Session() as session:
         dataset = session.query(Dataset).filter(Dataset.name == dataset_name).first()
         if not dataset:
@@ -288,7 +286,6 @@ def _complete_batch_and_store_metrics(dataset: Dataset, batch_id: int) -> dict:
 
 @router.post("/api/train/{dataset_name}", status_code=status.HTTP_202_ACCEPTED)
 def train(dataset_name: str):
-    """Эндпоинт для постановки обучения модели в очередь для указанного датасета."""
     dataset = get_dataset_by_name(dataset_name)
     images_dir = dataset.path
 
@@ -355,7 +352,6 @@ async def correct(
     labeled_images: List[LabeledImage],
     batch_id: int | None = Query(default=None),
 ):
-    """Эндпоинт для сохранения исправленных пользователем аннотаций."""
     dataset = get_dataset_by_name(dataset_name)
     images_dir = dataset.path
 
@@ -385,9 +381,7 @@ async def correct(
         raise HTTPException(status_code=500, detail="не удалось загрузить модель")
 
     saved_images: list[str] = []
-    # перебираем присланные изображения, сохраняем исправленные метки в YOLO-формате
     for item in labeled_images:
-        # защита от path traversal — берём только имя файла
         safe_filename = os.path.basename(item.filename)
         image_path = os.path.join(images_dir, safe_filename)
 
@@ -396,7 +390,6 @@ async def correct(
                 status_code=404, detail=f"{safe_filename} не найден в {dataset_name}"
             )
 
-        # конвертируем аннотации в dict и записываем в labels/train/<имя>.txt
         annotator.save_labels(
             dataset.path, safe_filename, [ann.model_dump() for ann in item.annotations]
         )
@@ -424,7 +417,7 @@ async def correct(
                 if row:
                     row.image_path = image_path
                     row.label_path = label_path
-                    row.status = "ready_for_training"
+                    row.status_id = 3
                 else:
                     session.add(
                         DatasetImage(
@@ -432,7 +425,7 @@ async def correct(
                             filename=filename,
                             image_path=image_path,
                             label_path=label_path,
-                            status="ready_for_training",
+                            status_id=3,
                         )
                     )
             session.commit()
@@ -470,13 +463,11 @@ async def correct(
 
 @router.get("/api/datasets/{dataset_name}/images")
 async def list_images(dataset_name: str):
-    """Эндпоинт для получения списка всех изображений в указанном датасете."""
     dataset = get_dataset_by_name(dataset_name)
     images_dir = dataset.path
     if not os.path.exists(images_dir):
         raise HTTPException(status_code=404, detail="датасет не найден")
 
-    # фильтруем только файлы изображений по расширению
     files = [
         f
         for f in os.listdir(images_dir)
@@ -487,24 +478,17 @@ async def list_images(dataset_name: str):
 
 @router.get("/api/datasets/{dataset_name}/images/{filename}")
 async def get_image(dataset_name: str, filename: str):
-    """Эндпоинт для получения конкретного изображения из датасета по имени файла."""
     dataset = get_dataset_by_name(dataset_name)
-    # защита от path traversal — берём только имя файла без директорий
     safe_filename = os.path.basename(filename)
     image_path = os.path.join(dataset.path, safe_filename)
 
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail="файл не найден")
-    # отдаём файл как бинарный ответ с автоопределением content-type
     return FileResponse(image_path)
 
 
 @router.post("/api/predict/{dataset_name}/{filename}")
 async def predict(dataset_name: str, filename: str):
-    """
-    Предсказание объектов на изображении.
-    Возвращает список bounding boxes с метками и координатами.
-    """
     dataset = get_dataset_by_name(dataset_name)
     annotator = get_annotator(dataset.id)
 

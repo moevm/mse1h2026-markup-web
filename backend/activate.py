@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db import Base, DatasetStatus, TrainingJob
+from db import Base, DatasetStatus, TrainingJob, ImageStatus
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timezone
@@ -34,6 +34,17 @@ def create_db_tables():
             session.add_all(statuses)
             has_changes = True
 
+        if session.query(ImageStatus).count() == 0:
+            image_statuses = [
+                ImageStatus(id=1, name="Не размечено", code="unlabeled"),
+                ImageStatus(id=2, name="Размечено", code="labeled"),
+                ImageStatus(id=3, name="Готово для обучения", code="ready_for_training"),
+                ImageStatus(id=4, name="Авторазмечено (требует проверки)", code="auto_labeled_pending_review"),
+                ImageStatus(id=5, name="Размечено окончательно", code="finalized"),
+            ]
+            session.add_all(image_statuses)
+            has_changes = True
+
         interrupted_jobs = (
             session.query(TrainingJob)
             .filter(TrainingJob.status == "running")
@@ -57,4 +68,3 @@ def get_session():
         yield session
     finally:
         session.close()
-
