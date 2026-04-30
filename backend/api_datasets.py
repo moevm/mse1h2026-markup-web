@@ -74,8 +74,8 @@ def select_batch_images_by_status(session, dataset_id: int, dataset_path: str, l
         )
         .all()
     )
-    status_by_filename = {row.filename: row.status for row in existing_rows}
-    eligible_statuses = {"unlabeled", "auto_labeled_pending_review"}
+    status_by_filename = {row.filename: row.status_id for row in existing_rows}
+    eligible_statuses = {1, 4}
 
     selected = [
         filename
@@ -340,8 +340,8 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
             if row:
                 row.image_path = image_path
                 row.label_path = label_path
-                if row.status == "unlabeled":
-                    row.status = "auto_labeled_pending_review"
+                if row.status_id == 1:
+                    row.status_id = 4
             else:
                 session.add(
                     DatasetImage(
@@ -349,7 +349,7 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                         filename=filename,
                         image_path=image_path,
                         label_path=label_path,
-                        status="auto_labeled_pending_review",
+                        status_id=4,
                     )
                 )
 
