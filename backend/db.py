@@ -124,3 +124,11 @@ class PredictionBox(Base):
     y1: Mapped[int] = mapped_column()
     x2: Mapped[int] = mapped_column()
     y2: Mapped[int] = mapped_column()
+
+class BoundingBoxClass(Base):
+    __tablename__ = "bounding_box_class"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    dataset_id: Mapped[int] = mapped_column(ForeignKey("dataset.id"))
+    class_id: Mapped[int] = mapped_column()
+    name: Mapped[str] = mapped_column(String(100))
+    color: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)

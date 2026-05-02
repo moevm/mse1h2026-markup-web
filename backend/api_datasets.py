@@ -12,6 +12,7 @@ from db import (
     PredictionBox,
     TrainingConfig,
     TrainingJob,
+    BoundingBoxClass,
 )
 from model_registry import get_all_models, get_model_by_id
 import os
@@ -109,6 +110,51 @@ class TrainingConfigRequest(BaseModel):
 class AugmentationConfigRequest(BaseModel):
     augmentation_enabled: Optional[bool] = None
     augmentation_threshold: Optional[float] = None
+
+class ClassItem(BaseModel):
+    class_id: int
+    name: str
+    color: Optional[str] = None
+
+class ClassesRequest(BaseModel):
+    classes: list[ClassItem]
+
+@router.get("/api/datasets/{dataset_id}/classes")
+async def get_dataset_classes(dataset_id: int):
+    with Session() as session:
+        classes = (
+            session.query(BoundingBoxClass)
+            .filter(BoundingBoxClass.dataset_id == dataset_id)
+            .order_by(BoundingBoxClass.class_id)
+            .all()
+        )
+        return [
+            {"class_id": c.class_id, "name": c.name, "color": c.color}
+            for c in classes
+        ]
+
+@router.post("/api/datasets/{dataset_id}/classes")
+async def update_dataset_classes(dataset_id: int, body: ClassesRequest):
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="датасет не найден")
+        
+        session.query(BoundingBoxClass).filter(
+            BoundingBoxClass.dataset_id == dataset_id
+        ).delete()
+        
+        for item in body.classes:
+            session.add(
+                BoundingBoxClass(
+                    dataset_id=dataset_id,
+                    class_id=item.class_id,
+                    name=item.name,
+                    color=item.color
+                )
+            )
+        session.commit()
+    return {"status": "ok"}
 
 
 @router.get("/api/getDatasets")
