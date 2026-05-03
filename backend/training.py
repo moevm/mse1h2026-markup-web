@@ -48,13 +48,14 @@ def _train_and_save(
             ModelVersion.dataset_id == dataset.id,
             ModelVersion.is_active == True
         ).first()
-        last_map = last_version.map50_95 if last_version else 0.0
+        last_map = last_version.map50_95 if last_version else None
 
     class_names = _load_dataset_class_names(dataset.id)
 
     use_augment = (
-        config.augmentation_enabled and
-        last_map < config.augmentation_threshold
+    config.augmentation_enabled 
+    and last_map is not None 
+    and last_map < config.augmentation_threshold
     ) if config else False
 
 
