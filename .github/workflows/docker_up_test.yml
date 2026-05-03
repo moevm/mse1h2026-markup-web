@@ -1,0 +1,14 @@
+name: Docker up test 
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build the Docker image
+        run: docker compose up -d
