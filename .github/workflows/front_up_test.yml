@@ -7,21 +7,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-  steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+    steps: 
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Install Python
-          uses: actions/setup-python@v5
-          with:
-            python-version: '3.14' 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
 
-        - name: Install dependencies
-          run: |
-          python3 -m venv ./frontend-server/.venv ./frontend-server/.venv/bin/pip install -r ./frontend-server/requirements.txt
+      - name: Install dependencies
+        run: |
+          python3 -m venv ./frontend-server/.venv
+          ./frontend-server/.venv/bin/pip install -r ./frontend-server/requirements.txt
 
-        - name: Test run 
-          run: |
+      - name: Test run 
+        run: |
           ./frontend-server/.venv/bin/python ./frontend-server/main.py &
           PID=$!
           sleep 5
@@ -31,5 +32,4 @@ jobs:
           else
             echo "Fail"
             exit 1
-          fi   
-
+          fi
