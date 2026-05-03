@@ -4,6 +4,7 @@ import numpy as np
 import yaml
 import os
 import shutil
+import glob
 
 class AutoAnnotator:
     '''модель'''
@@ -73,8 +74,24 @@ class AutoAnnotator:
             yaml.dump(yaml_data, f)
 
         # запуск обучения - results содержит путь к весам
-        results = self.model.train(data=yaml_path, epochs=epochs, imgsz=imgsz, batch=batch_size, lr0=learning_rate, optimizer=optimizer, augment=augment)
-
+        results = self.model.train(
+            data=yaml_path, epochs=epochs,
+            imgsz=imgsz, batch=batch_size, lr0=learning_rate,
+            optimizer=optimizer,
+            # Явное управление гиперпараметрами аугментаций
+            hsv_h=0.0 if not augment else 0.015,
+            hsv_s=0.0 if not augment else 0.7,
+            hsv_v=0.0 if not augment else 0.4,
+            degrees=0.0 if not augment else 0.0,
+            translate=0.0 if not augment else 0.1,
+            scale=0.0 if not augment else 0.5,
+            shear=0.0 if not augment else 0.0,
+            perspective=0.0,
+            flipud=0.0 if not augment else 0.5,
+            fliplr=0.0 if not augment else 0.5,
+            mosaic=0.0 if not augment else 1.0,
+            mixup=0.0 if not augment else 0.0,
+        )
         # определяем следующую версию модели
         models_dir = os.path.join(dataset_path, "models")
         os.makedirs(models_dir, exist_ok=True)
@@ -93,6 +110,10 @@ class AutoAnnotator:
             self.model = RTDETR(model_save_path)
         else:
             self.model = YOLO(model_save_path)
+        
+        train_dirs = glob.glob('runs/detect/train*')
+        for d in train_dirs:
+            shutil.rmtree(d, ignore_errors=True)
 
         return model_save_path, next_version
 

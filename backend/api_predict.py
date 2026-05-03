@@ -375,6 +375,37 @@ async def correct(
                     status_code=409,
                     detail=f"batch id={batch_id} уже завершен или недоступен"
                 )
+                
+             # Извлекаем ожидаемый список имён файлов батча
+            expected_filenames: list[str] = []
+            if batch.image_filenames_json:
+                try:
+                    raw = json.loads(batch.image_filenames_json)
+                    if isinstance(raw, list):
+                        expected_filenames = [f for f in raw if isinstance(f, str) and f]
+                except json.JSONDecodeError:
+                    expected_filenames = []
+
+            # Если ожидаемый список пуст (батч без изображений), считаем это ошибкой конфигурации
+            if not expected_filenames:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Batch не содержит списка изображений (image_filenames_json пуст)"
+                )
+                
+            # Собираем имена файлов, присланные фронтендом
+            submitted_filenames = {item.filename for item in labeled_images}
+            expected_set = set(expected_filenames)
+
+            if submitted_filenames != expected_set:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Batch должен быть завершён полностью. "
+                        f"Ожидались файлы: {sorted(expected_set)}, "
+                        f"получены: {sorted(submitted_filenames)}"
+                    )
+                )
 
     annotator = get_annotator(dataset.id)
     if not annotator:
