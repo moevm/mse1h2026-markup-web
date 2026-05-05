@@ -74,7 +74,7 @@
 
 .section-workspace__auto-markup-box {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.03);
@@ -82,10 +82,77 @@
   border-radius: 8px;
 }
 
+.section-workspace__auto-markup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .section-workspace__auto-markup-box label {
   color: #94A3B8;
   font-size: 13px;
   white-space: nowrap;
+}
+
+.section-workspace__conf-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #1E293B;
+}
+
+.section-workspace__conf-filter-label {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  color: #94A3B8;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.section-workspace__conf-filter-label input[type="checkbox"] {
+  accent-color: #6366F1;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.section-workspace__conf-filter-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.section-workspace__conf-filter-input {
+  width: 70px;
+  height: 30px;
+  padding: 4px 8px;
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.section-workspace__conf-filter-input:focus {
+  border-color: #6366F1;
+}
+
+.section-workspace__toolbar-server-button--save-threshold {
+  background-color: #6366F1;
+  color: #fff;
+  font-weight: 600;
+  padding: 0 14px;
+  height: 30px;
+  font-size: 13px;
+}
+
+.section-workspace__toolbar-server-button--save-threshold:hover {
+  background-color: #4F46E5;
 }
 
 .section-workspace__auto-markup-input {
