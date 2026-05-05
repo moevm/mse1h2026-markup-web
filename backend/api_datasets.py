@@ -23,7 +23,7 @@ import json
 from urllib.parse import quote
 
 DATASETS_ROOT_HOST = "C:/"
-DATASETS_ROOT_CONTAINER = "/host_c"
+DATASETS_ROOT_CONTAINER = "/mnt/host_c"
 
 def resolve_container_path(user_path: str) -> str:
     user_path = user_path.replace("\\", "/")
@@ -196,6 +196,7 @@ async def add_dataset(body: AddDatasetRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    print(container_path)
 
     # проверяем что путь существует
     if not os.path.exists(container_path):

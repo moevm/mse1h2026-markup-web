@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+docker-compose.yml
+.env
+frontend/
+datastes/
+datasets/
+__pycache__
+*.pyc

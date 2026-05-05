@@ -34,9 +34,10 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-markup_db}
-      DATASETS_ROOT_HOST: "/"
+      DATASETS_ROOT_HOST: "C:/"
     volumes:
       - datasets_data:/app/datasets
+      - "C:/:/mnt/host_c"
     depends_on:
       - db
 
