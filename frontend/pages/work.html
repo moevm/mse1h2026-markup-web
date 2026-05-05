@@ -87,17 +87,40 @@
             </div>
             <div class="section-workspace__toolbar-server-actions">
               <div class="section-workspace__auto-markup-box">
-                <label for="auto-markup-count">Разметить автоматически:</label>
-                <input 
-                  type="number" 
-                  id="auto-markup-count" 
-                  min="1" 
-                  placeholder="Кол-во"
-                  class="section-workspace__auto-markup-input"
-                />
-                <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--auto-markup">
-                  Запустить
-                </button>
+                <div class="section-workspace__auto-markup-row">
+                  <label for="auto-markup-count">Разметить автоматически:</label>
+                  <input
+                    type="number"
+                    id="auto-markup-count"
+                    min="1"
+                    placeholder="Кол-во"
+                    class="section-workspace__auto-markup-input"
+                  />
+                  <button class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--auto-markup">
+                    Запустить
+                  </button>
+                </div>
+                <div class="section-workspace__conf-filter">
+                  <label class="section-workspace__conf-filter-label">
+                    <input type="checkbox" id="conf-filter-enabled" />
+                    Автопринятие по порогу уверенности
+                  </label>
+                  <div class="section-workspace__conf-filter-controls" id="conf-filter-controls">
+                    <label for="conf-filter-threshold">Порог (0–1):</label>
+                    <input
+                      type="number"
+                      id="conf-filter-threshold"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value="0.85"
+                      class="section-workspace__conf-filter-input"
+                    />
+                    <button id="conf-filter-save" class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--save-threshold">
+                      Сохранить
+                    </button>
+                  </div>
+                </div>
               </div>
               <button
                 class="section-workspace__toolbar-server-button section-workspace__toolbar-server-button--recheck"

@@ -425,6 +425,22 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                 detail="для этого датасета уже есть активный batch"
             )
 
+        # Confidence filter: images where all boxes >= threshold are auto-accepted as GT
+        config = session.query(TrainingConfig).filter(TrainingConfig.dataset_id == dataset_id).first()
+        conf_filter_enabled = config.augmentation_enabled if config else False
+        conf_threshold = float(config.augmentation_threshold) if config else 0.85
+
+        boxes_by_filename = {img["filename"]: img["boxes"] for img in images_payload}
+        auto_accepted_set: set[str] = set()
+        review_list: list[str] = []
+
+        for filename in image_filenames:
+            boxes = boxes_by_filename.get(filename, [])
+            if conf_filter_enabled and boxes and all(b["confidence"] >= conf_threshold for b in boxes):
+                auto_accepted_set.add(filename)
+            else:
+                review_list.append(filename)
+
         existing_images = {
             row.filename: row
             for row in session.query(DatasetImage).filter(
@@ -432,6 +448,9 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                 DatasetImage.filename.in_(image_filenames)
             ).all()
         }
+
+        ready_status = session.query(ImageStatus).filter(ImageStatus.code == "ready_for_training").first()
+        ready_status_id = ready_status.id if ready_status else 3
 
         for filename in image_filenames:
             image_path = os.path.join(dataset_path, filename)
@@ -442,11 +461,12 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                 os.path.splitext(filename)[0] + ".txt"
             )
             row = existing_images.get(filename)
+            target_status_id = ready_status_id if filename in auto_accepted_set else 4
             if row:
                 row.image_path = image_path
                 row.label_path = label_path
-                if row.status_id == 1:
-                    row.status_id = 4
+                if row.status_id in (1, 4):
+                    row.status_id = target_status_id
             else:
                 session.add(
                     DatasetImage(
@@ -454,41 +474,77 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                         filename=filename,
                         image_path=image_path,
                         label_path=label_path,
-                        status_id=4,
+                        status_id=target_status_id,
                     )
                 )
 
-        batch = PredictionBatch(
-            dataset_id=dataset_id,
-            model_version_id=model_version_id,
-            architecture=architecture,
-            status="active",
-            image_filenames_json=json.dumps(image_filenames),
-        )
-        session.add(batch)
         session.flush()
 
+        # Re-fetch to get IDs for newly inserted rows
+        all_images_in_db = {
+            row.filename: row
+            for row in session.query(DatasetImage).filter(
+                DatasetImage.dataset_id == dataset_id,
+                DatasetImage.filename.in_(image_filenames)
+            ).all()
+        }
+
+        # Save boxes for auto-accepted images as GT (linked via dataset_image_id, no batch)
         for box in snapshot_boxes:
-            session.add(
-                PredictionBox(
-                    batch_id=batch.id,
-                    image_filename=box["image_filename"],
-                    class_id=box["class_id"],
-                    confidence=box["confidence"],
-                    x1=box["x1"],
-                    y1=box["y1"],
-                    x2=box["x2"],
-                    y2=box["y2"],
+            if box["image_filename"] in auto_accepted_set:
+                img_row = all_images_in_db.get(box["image_filename"])
+                session.add(
+                    PredictionBox(
+                        dataset_image_id=img_row.id if img_row else None,
+                        image_filename=box["image_filename"],
+                        class_id=box["class_id"],
+                        confidence=box["confidence"],
+                        x1=box["x1"],
+                        y1=box["y1"],
+                        x2=box["x2"],
+                        y2=box["y2"],
+                    )
                 )
+
+        # Create batch only for images that need user review
+        batch_id = None
+        review_images_payload = [img for img in images_payload if img["filename"] in set(review_list)]
+        review_snapshot_boxes = [b for b in snapshot_boxes if b["image_filename"] in set(review_list)]
+
+        if review_list:
+            batch = PredictionBatch(
+                dataset_id=dataset_id,
+                model_version_id=model_version_id,
+                architecture=architecture,
+                status="active",
+                image_filenames_json=json.dumps(review_list),
             )
+            session.add(batch)
+            session.flush()
+
+            for box in review_snapshot_boxes:
+                session.add(
+                    PredictionBox(
+                        batch_id=batch.id,
+                        image_filename=box["image_filename"],
+                        class_id=box["class_id"],
+                        confidence=box["confidence"],
+                        x1=box["x1"],
+                        y1=box["y1"],
+                        x2=box["x2"],
+                        y2=box["y2"],
+                    )
+                )
+
+            batch_id = batch.id
 
         session.commit()
-        batch_id = batch.id
 
     return {
         "batch_id": batch_id,
         "dataset_id": dataset_id,
-        "images": images_payload,
+        "images": review_images_payload,
+        "auto_accepted_count": len(auto_accepted_set),
     }
 
 

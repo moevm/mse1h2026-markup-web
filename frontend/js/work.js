@@ -346,9 +346,10 @@ document.querySelector('.section-workspace__toolbar-server-button--auto-markup')
     const imagesToProcess = images.slice(0, Math.min(count, images.length));
     
     Notify.success(`Начинаем авторазметку ${imagesToProcess.length} изображений...`);
-    
+
     let successCount = 0;
     let errorCount = 0;
+    let autoAcceptedCount = 0;
     
     // Process each image
     for (const img of imagesToProcess) {
@@ -386,24 +387,36 @@ document.querySelector('.section-workspace__toolbar-server-button--auto-markup')
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detections)
         });
-        
+
         if (!saveRes.ok) {
           console.error(`Save failed for ${img.filename}:`, saveRes.status);
           errorCount++;
           continue;
         }
-        
-        const saveResult = await saveRes.json();
-        console.log(`Saved ${saveResult.count} detections for ${img.filename}`);
+
+        // Auto-accept if all boxes pass the confidence threshold
+        const allAboveThreshold = detections.length > 0 &&
+          detections.every(d => d.conf >= confFilterThreshold);
+
+        if (confFilterEnabled && allAboveThreshold) {
+          const acceptRes = await fetch(`http://localhost:8000/api/images/${img.id}/accept`, { method: 'POST' });
+          if (acceptRes.ok) {
+            autoAcceptedCount++;
+          }
+        }
+
         successCount++;
-        
+
       } catch (err) {
         console.error(`Error processing ${img.filename}:`, err);
         errorCount++;
       }
     }
     
-    Notify.success(`Авторазметка завершена!\nУспешно: ${successCount}\nОшибок: ${errorCount}`);
+    const autoMsg = (confFilterEnabled && autoAcceptedCount > 0)
+      ? `\nАвтопринято как GT: ${autoAcceptedCount}`
+      : '';
+    Notify.success(`Авторазметка завершена!\nУспешно: ${successCount}${autoMsg}\nОшибок: ${errorCount}`);
     
     // Reload current category to show updated images
     loadImagesForCategory();
@@ -467,7 +480,61 @@ document.querySelector('.section-workspace__decision-button--reject')?.addEventL
   }
 });
 
+// Confidence filter settings
+let confFilterEnabled = false;
+let confFilterThreshold = 0.85;
+
+async function loadConfFilterConfig() {
+  try {
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/augmentation`);
+    if (!res.ok) return;
+    const data = await res.json();
+    confFilterEnabled = data.augmentation_enabled ?? false;
+    confFilterThreshold = data.augmentation_threshold ?? 0.85;
+
+    const checkbox = document.getElementById('conf-filter-enabled');
+    const thresholdInput = document.getElementById('conf-filter-threshold');
+    if (checkbox) checkbox.checked = confFilterEnabled;
+    if (thresholdInput) thresholdInput.value = confFilterThreshold;
+    updateConfFilterControlsVisibility();
+  } catch (err) {
+    console.error('Failed to load conf filter config:', err);
+  }
+}
+
+function updateConfFilterControlsVisibility() {
+  const controls = document.getElementById('conf-filter-controls');
+  if (controls) controls.style.display = confFilterEnabled ? 'flex' : 'none';
+}
+
+document.getElementById('conf-filter-enabled')?.addEventListener('change', (e) => {
+  confFilterEnabled = e.target.checked;
+  updateConfFilterControlsVisibility();
+});
+
+document.getElementById('conf-filter-save')?.addEventListener('click', async () => {
+  const thresholdInput = document.getElementById('conf-filter-threshold');
+  const threshold = parseFloat(thresholdInput?.value);
+  if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+    Notify.error('Порог должен быть числом от 0 до 1');
+    return;
+  }
+  confFilterThreshold = threshold;
+  try {
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/augmentation`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ augmentation_enabled: confFilterEnabled, augmentation_threshold: confFilterThreshold })
+    });
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    Notify.success('Настройки порога сохранены');
+  } catch (err) {
+    Notify.error('Ошибка при сохранении настроек');
+  }
+});
+
 // Initialize
+loadConfFilterConfig();
 updateCategory();
 
 // Expose DetectionOverlay for backward compatibility
