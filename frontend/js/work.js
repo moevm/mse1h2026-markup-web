@@ -1,504 +1,482 @@
-let detections = [
-  {
-    id: 1,
-    class_id: 0,
-    label: "Машина",
-    cls: "red",
-    conf: 0.98,
-    x1: 330,
-    y1: 80,
-    x2: 510,
-    y2: 440,
-  },
-  {
-    id: 2,
-    class_id: 1,
-    label: "Человек",
-    cls: "green",
-    conf: 0.45,
-    x1: 80,
-    y1: 280,
-    x2: 220,
-    y2: 560,
-  },
-  {
-    id: 3,
-    class_id: 0,
-    label: "Машина",
-    cls: "blue",
-    conf: 0.91,
-    x1: 550,
-    y1: 400,
-    x2: 670,
-    y2: 544,
-  },
-  {
-    id: 4,
-    class_id: 0,
-    label: "Машина",
-    cls: "red",
-    conf: 0.87,
-    x1: 420,
-    y1: 440,
-    x2: 500,
-    y2: 552,
-  },
+// Check if dataset is selected
+import { classesManager } from './managers/classesManager.js';
+import { detectionsModule } from './modules/detectionsModule.js';
+import { Notify } from './utils/notify.js'
+
+const currentDataset = sessionStorage.getItem('currentDataset') || localStorage.getItem('currentDataset');
+if (!currentDataset) {
+  window.location.href = '/';
+}
+
+const dataset = JSON.parse(currentDataset);
+
+// Display dataset name
+document.getElementById('dataset-name').textContent = dataset.name;
+
+// Initialize classes manager
+classesManager.init(dataset.id);
+
+// Initialize detections module
+detectionsModule.init('scene', 'detection-layer', 'edit-popup');
+
+// Setup mode buttons
+document.getElementById('btn-select')?.addEventListener('click', () => detectionsModule.setMode('select'));
+document.getElementById('btn-draw')?.addEventListener('click', () => detectionsModule.setMode('draw'));
+document.getElementById('btn-delete-sel')?.addEventListener('click', () => {
+  if (detectionsModule.selectedId !== null) {
+    detectionsModule.delete(detectionsModule.selectedId);
+  }
+});
+
+// Categories for image slider
+const CATEGORIES = [
+  { id: 1, name: 'В ОЖИДАНИИ', codes: ['unlabeled'] },
+  { id: 2, name: 'АВТО-РАЗМЕТКА (ТРЕБУЕТ ПРОВЕРКИ)', codes: ['auto_labeled_pending_review'] },
+  { id: 3, name: 'РАЗМЕЧЕНО', codes: ['labeled', 'finalized', 'ready_for_training'] }
 ];
 
-let nextId = 10;
+let currentCategoryIndex = 0;
+let currentImages = [];
+let currentImageIndex = 0;
+let currentImage = null;
 
-const scene = document.getElementById("scene");
-const layer = document.getElementById("detection-layer");
-const popup = document.getElementById("edit-popup");
-const btnSelect = document.getElementById("btn-select");
-const btnDraw = document.getElementById("btn-draw");
-const btnDelSel = document.getElementById("btn-delete-sel");
+// Category slider
+const categoryTitle = document.getElementById('current-category');
+const prevBtn = document.querySelector('.section-workspace__slider-btn--prev');
+const nextBtn = document.querySelector('.section-workspace__slider-btn--next');
 
-const popLabel = document.getElementById("pop-label");
-const popClass = document.getElementById("pop-class");
-const popConf = document.getElementById("pop-conf");
-const popX = document.getElementById("pop-x");
-const popY = document.getElementById("pop-y");
-const popW = document.getElementById("pop-w");
-const popH = document.getElementById("pop-h");
-
-let mode = "select";
-let selectedId = null;
-
-let dragState = null;
-let drawState = null;
-
-let ghost = null;
-
-function sceneRect() {
-  return scene.getBoundingClientRect();
+function updateCategory() {
+  categoryTitle.textContent = CATEGORIES[currentCategoryIndex].name;
+  loadImagesForCategory();
+  updateDecisionButtons();
 }
 
-function pxToPercentX(px) {
-  const r = sceneRect();
-  return r.width > 0 ? (px / r.width) * 100 : 0;
+function updateDecisionButtons() {
+   const category = CATEGORIES[currentCategoryIndex];
+   
+   // Get UI elements
+   const decisionBox = document.querySelector('.section-workspace__decision-box');
+   const autoMarkupBox = document.querySelector('.section-workspace__auto-markup-box');
+   const saveButton = document.querySelector('.section-workspace__toolbar-server-button--recheck');
+   
+   // Show/hide buttons based on category
+   if (category.codes && category.codes.includes('unlabeled')) {
+     // В ОЖИДАНИИ: показать авторазметку и сохранение
+     if (autoMarkupBox) autoMarkupBox.style.display = 'flex';
+     if (saveButton) saveButton.style.display = 'block';
+     if (decisionBox) decisionBox.style.display = 'none';
+   } else if (category.codes && category.codes.includes('auto_labeled_pending_review')) {
+     // АВТО-РАЗМЕТКА: скрыть авторазметку, показать сохранение и принять/отклонить
+     if (autoMarkupBox) autoMarkupBox.style.display = 'none';
+     if (saveButton) saveButton.style.display = 'block';
+     if (decisionBox) decisionBox.style.display = 'flex';
+   } else {
+     // РАЗМЕЧЕНО: скрыть всё
+     if (autoMarkupBox) autoMarkupBox.style.display = 'none';
+     if (saveButton) saveButton.style.display = 'none';
+     if (decisionBox) decisionBox.style.display = 'none';
+   }
+ }
+
+prevBtn.addEventListener('click', () => {
+  currentCategoryIndex = (currentCategoryIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
+  updateCategory();
+});
+
+nextBtn.addEventListener('click', () => {
+  currentCategoryIndex = (currentCategoryIndex + 1) % CATEGORIES.length;
+  updateCategory();
+});
+
+async function loadImagesForCategory() {
+  const category = CATEGORIES[currentCategoryIndex];
+  try {
+    // If category has multiple codes, fetch all and merge
+    if (category.codes && category.codes.length > 1) {
+      const allImages = [];
+      for (const code of category.codes) {
+        const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/images?status=${code}`);
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+        const images = await res.json();
+        allImages.push(...images);
+      }
+      currentImages = allImages;
+    } else {
+      // Single code
+      const code = category.codes ? category.codes[0] : category.code;
+      const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/images?status=${code}`);
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+      currentImages = await res.json();
+    }
+    
+    currentImageIndex = 0;
+    renderImagesList();
+    if (currentImages.length > 0) {
+      loadImage(currentImages[0]);
+    }
+  } catch (err) {
+    console.error('Failed to load images:', err);
+    currentImages = [];
+    renderImagesList();
+  }
 }
 
-function pxToPercentY(px) {
-  const r = sceneRect();
-  return r.height > 0 ? (px / r.height) * 100 : 0;
+function renderImagesList() {
+   const list = document.getElementById('images-list');
+   list.innerHTML = '';
+   
+   if (currentImages.length === 0) {
+     list.innerHTML = '<li class="section-workspace__no-images">Нет изображений в этой категории</li>';
+     return;
+   }
+   
+   currentImages.forEach((img, index) => {
+     const li = document.createElement('li');
+     li.className = 'section-workspace__image-card';
+     if (index === currentImageIndex) {
+       li.classList.add('section-workspace__image-card--active');
+     }
+     
+     li.innerHTML = `
+       <button class="section-workspace__image-button" data-index="${index}">
+         <img 
+           class="section-workspace__image-preview" 
+           src="http://localhost:8000${img.preview_url}" 
+           alt="${img.filename}"
+         />
+         <h4 class="section-workspace__image-title">${img.filename}</h4>
+       </button>
+     `;
+     
+     li.querySelector('button').addEventListener('click', () => {
+       currentImageIndex = index;
+       loadImage(img);
+       renderImagesList();
+     });
+     
+     list.appendChild(li);
+   });
+ }
+
+function renderObjectList() {
+    const list = document.querySelector('.section-workspace__object-list');
+    const detections = detectionsModule.getAll();
+    
+    list.innerHTML = '';
+    
+    if (detections.length === 0) {
+      return;
+    }
+   
+   detections.forEach((detection, index) => {
+     const li = document.createElement('li');
+     li.className = 'section-workspace__object-item';
+     
+     // Determine confidence percentage and styling
+     const confidencePercent = Math.round(detection.conf * 100);
+     let confidenceClass = '';
+     if (confidencePercent >= 80) {
+       confidenceClass = 'section-workspace__object-sub-data--high-percent';
+     } else if (confidencePercent >= 50) {
+       confidenceClass = 'section-workspace__object-sub-data--medium-percent';
+     } else {
+       confidenceClass = 'section-workspace__object-sub-data--low-percent';
+     }
+     
+li.innerHTML = `
+        <button class="section-workspace__object-button" data-id="${detection.id}">
+          <div class="section-workspace__object-main-data">
+            <h4 class="section-workspace__object-title">${detection.label} #${index + 1}</h4>
+            <h5 class="section-workspace__object-sub-title">
+              ID: det_${detection.id.toString().padStart(4, '0')}
+            </h5>
+          </div>
+          <div class="section-workspace__object-sub-data ${confidenceClass}">
+            ${confidencePercent}%
+          </div>
+        </button>
+      `;
+     
+     // Add click handler to select the detection
+     li.querySelector('button').addEventListener('click', () => {
+       detectionsModule.select(detection.id);
+       // Update active state in object list
+       document.querySelectorAll('.section-workspace__object-button').forEach(btn => {
+         btn.classList.remove('section-workspace__object-button--selected');
+       });
+       li.querySelector('button').classList.add('section-workspace__object-button--selected');
+     });
+     
+     list.appendChild(li);
+   });
+   
+   // If there's a selected detection, highlight it in the list
+   const selectedDetection = detectionsModule.getDetection(detectionsModule.selectedId);
+   if (selectedDetection) {
+     const selectedButton = list.querySelector(`.section-workspace__object-button[data-id="${selectedDetection.id}"]`);
+     if (selectedButton) {
+       selectedButton.classList.add('section-workspace__object-button--selected');
+     }
+   }
+ }
+
+function loadImage(img) {
+  currentImage = img;
+  detectionsModule.setImage(`http://localhost:8000${img.url}`);
+  
+  // Create DB record if image doesn't have ID yet
+  if (!img.id) {
+    createImageRecord(img);
+  } else {
+    loadDetections(img.id);
+  }
 }
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
-
-function getDetection(id) {
-  return detections.find((d) => d.id === id);
-}
-
-function updateDetection(id, patch) {
-  const d = getDetection(id);
-  if (!d) return;
-  Object.assign(d, patch);
-  refreshBbox(id);
-  if (selectedId === id) syncPopup(d);
-}
-
-const HANDLES = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
-
-function createBboxEl(d) {
-  const box = document.createElement("div");
-  box.className = "bbox";
-  box.dataset.id = d.id;
-  box.dataset.class = d.cls;
-
-  box.innerHTML = `
-    <div class="bbox__border"></div>
-    <div class="bbox__label"></div>
-    <div class="bbox__conf-bar"></div>
-    ${HANDLES.map((dir) => `<div class="bbox__handle" data-dir="${dir}"></div>`).join("")}
-    <button class="bbox__delete" title="Удалить">✕</button>
-  `;
-
-  box.querySelector(".bbox__border").addEventListener("mousedown", (e) => {
-    if (mode !== "select") return;
-    e.stopPropagation();
-    selectBbox(d.id);
-    startMove(e, d.id);
-  });
-
-  box.querySelector(".bbox__border").addEventListener("dblclick", (e) => {
-    e.stopPropagation();
-    openPopup(d.id, e.clientX, e.clientY);
-  });
-
-  box.querySelectorAll(".bbox__handle").forEach((h) => {
-    h.addEventListener("mousedown", (e) => {
-      if (mode !== "select") return;
-      e.stopPropagation();
-      selectBbox(d.id);
-      startResize(e, d.id, h.dataset.dir);
+async function createImageRecord(img) {
+  try {
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/create-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: img.filename })
     });
-  });
-
-  box.querySelector(".bbox__delete").addEventListener("click", (e) => {
-    e.stopPropagation();
-    deleteBbox(d.id);
-  });
-
-  box.addEventListener("mousedown", (e) => {
-    if (mode !== "select") return;
-    e.stopPropagation();
-    selectBbox(d.id);
-  });
-
-  layer.appendChild(box);
-  return box;
-}
-
-function refreshBbox(id) {
-  const d = getDetection(id);
-  const el = layer.querySelector(`[data-id="${id}"]`);
-  if (!el || !d) return;
-
-  el.dataset.class = d.cls;
-
-  const widthPx = d.x2 - d.x1;
-  const heightPx = d.y2 - d.y1;
-
-  Object.assign(el.style, {
-    left: pxToPercentX(d.x1) + "%",
-    top: pxToPercentY(d.y1) + "%",
-    width: pxToPercentX(widthPx) + "%",
-    height: pxToPercentY(heightPx) + "%",
-  });
-
-  el.querySelector(".bbox__label").textContent =
-    `${d.label}: ${Math.round(d.conf * 100)}%`;
-  el.querySelector(".bbox__conf-bar").style.width = d.conf * 100 + "%";
-}
-
-function renderAll() {
-  layer.innerHTML = "";
-  detections.forEach((d) => {
-    createBboxEl(d);
-    refreshBbox(d.id);
-  });
-}
-
-function selectBbox(id) {
-  if (selectedId === id) return;
-  deselectAll();
-  selectedId = id;
-  layer.querySelector(`[data-id="${id}"]`)?.classList.add("selected");
-}
-
-function deselectAll() {
-  selectedId = null;
-  layer
-    .querySelectorAll(".bbox.selected")
-    .forEach((el) => el.classList.remove("selected"));
-  closePopup();
-}
-
-function deleteBbox(id) {
-  detections = detections.filter((d) => d.id !== id);
-  layer.querySelector(`[data-id="${id}"]`)?.remove();
-  if (selectedId === id) {
-    selectedId = null;
-    closePopup();
+    
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    
+    const data = await res.json();
+    img.id = data.id;
+    currentImage = img;
+    loadDetections(img.id);
+  } catch (err) {
+    console.error('Failed to create image record:', err);
+    detectionsModule.load([]);
   }
 }
 
-function startMove(e, id) {
-  const d = getDetection(id);
-  dragState = {
-    type: "move",
-    id: d.id,
-    startMx: e.clientX,
-    startMy: e.clientY,
-    startX1: d.x1,
-    startY1: d.y1,
-  };
-  document.body.style.cursor = "move";
+async function loadDetections(imageId) {
+   try {
+     const res = await fetch(`http://localhost:8000/api/images/${imageId}/detections`);
+     if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+     const data = await res.json();
+     detectionsModule.load(data);
+     renderObjectList();
+   } catch (err) {
+     console.error('Failed to load detections:', err);
+     detectionsModule.load([]);
+     renderObjectList();
+   }
+ }
+
+async function saveDetections(imageId) {
+  if (!imageId) return;
+  
+  const detections = detectionsModule.getAll();
+  
+  try {
+    const res = await fetch(`http://localhost:8000/api/images/${imageId}/detections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(detections)
+    });
+    
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    
+    const result = await res.json();
+    console.log(`Saved ${result.count} detections`);
+    return true;
+  } catch (err) {
+    console.error('Failed to save detections:', err);
+    return false;
+  }
 }
 
-function startResize(e, id, dir) {
-  const d = getDetection(id);
-  dragState = {
-    type: "resize",
-    id,
-    dir,
-    startMx: e.clientX,
-    startMy: e.clientY,
-    startX1: d.x1,
-    startY1: d.y1,
-    startX2: d.x2,
-    startY2: d.y2,
-  };
-  document.body.style.cursor = e.target.style.cursor;
-}
-
-function getRelPos(e) {
-  const r = sceneRect();
-  return {
-    px: clamp(e.clientX - r.left, 0, r.width),
-    py: clamp(e.clientY - r.top, 0, r.height),
-  };
-}
-
-scene.addEventListener("mousedown", (e) => {
-  if (mode === "draw") {
-    const { px, py } = getRelPos(e);
-    ghost = document.createElement("div");
-    ghost.className = "draw-ghost";
-    ghost.style.left = pxToPercentX(px) + "%";
-    ghost.style.top = pxToPercentY(py) + "%";
-    ghost.style.width = "0";
-    ghost.style.height = "0";
-    layer.appendChild(ghost);
-    drawState = { startPx: px, startPy: py };
+// Save detections button
+document.querySelector('.section-workspace__toolbar-server-button--recheck')?.addEventListener('click', async () => {
+  if (!currentImage) {
+    Notify.error('Нет выбранного изображения');
     return;
   }
-  if (mode === "select") deselectAll();
+  
+  const success = await saveDetections(currentImage.id);
+  if (success) {
+    Notify.success('Разметка сохранена успешно!');
+    // Move to next image
+    currentImageIndex++;
+    if (currentImageIndex < currentImages.length) {
+      loadImage(currentImages[currentImageIndex]);
+      renderImagesList();
+    } else {
+      // Reload category to get fresh images
+      loadImagesForCategory();
+    }
+  } else {
+    Notify.error('Ошибка при сохранении разметки');
+  }
 });
 
-document.addEventListener("mousemove", (e) => {
-  if (dragState?.type === "move") {
-  const r = sceneRect();
-  const dx = e.clientX - dragState.startMx;
-  const dy = e.clientY - dragState.startMy;
-
-  const d = getDetection(dragState.id);
-  const boxW = d.x2 - d.x1;
-  const boxH = d.y2 - d.y1;
-
-  let nx1 = dragState.startX1 + dx;
-  let ny1 = dragState.startY1 + dy;
-
-  nx1 = clamp(nx1, 0, r.width - boxW);
-  ny1 = clamp(ny1, 0, r.height - boxH);
-
-  updateDetection(dragState.id, {
-    x1: nx1,
-    y1: ny1,
-    x2: nx1 + boxW,
-    y2: ny1 + boxH,
-  });
-
-  return;
-}
-
-  if (dragState?.type === "resize") {
-  const r = sceneRect();
-  const dx = e.clientX - dragState.startMx;
-  const dy = e.clientY - dragState.startMy;
-  const dir = dragState.dir;
-
-  let x1 = dragState.startX1;
-  let y1 = dragState.startY1;
-  let x2 = dragState.startX2;
-  let y2 = dragState.startY2;
-
-  const MIN = 8;
-
-  if (dir.includes("e")) x2 = dragState.startX2 + dx;
-  if (dir.includes("s")) y2 = dragState.startY2 + dy;
-  if (dir.includes("w")) x1 = dragState.startX1 + dx;
-  if (dir.includes("n")) y1 = dragState.startY1 + dy;
-
-  x1 = clamp(x1, 0, r.width);
-  y1 = clamp(y1, 0, r.height);
-  x2 = clamp(x2, 0, r.width);
-  y2 = clamp(y2, 0, r.height);
-
-  if (x2 - x1 < MIN) {
-    if (dir.includes("w")) x1 = x2 - MIN;
-    else x2 = x1 + MIN;
-  }
-
-  if (y2 - y1 < MIN) {
-    if (dir.includes("n")) y1 = y2 - MIN;
-    else y2 = y1 + MIN;
-  }
-
-  x1 = clamp(x1, 0, r.width);
-  y1 = clamp(y1, 0, r.height);
-  x2 = clamp(x2, 0, r.width);
-  y2 = clamp(y2, 0, r.height);
-
-  updateDetection(dragState.id, { x1, y1, x2, y2 });
-  return;
-}
-
-  if (drawState && ghost) {
-    const { px, py } = getRelPos(e);
-    const x0 = Math.min(drawState.startPx, px);
-    const y0 = Math.min(drawState.startPy, py);
-    const w = Math.abs(px - drawState.startPx);
-    const h = Math.abs(py - drawState.startPy);
-
-    ghost.style.left = pxToPercentX(x0) + "%";
-    ghost.style.top = pxToPercentY(y0) + "%";
-    ghost.style.width = pxToPercentX(w) + "%";
-    ghost.style.height = pxToPercentY(h) + "%";
-}
-});
-
-document.addEventListener("mouseup", (e) => {
-  document.body.style.cursor = "";
-
-  if (dragState) {
-    dragState = null;
+// Auto markup button
+document.querySelector('.section-workspace__toolbar-server-button--auto-markup')?.addEventListener('click', async () => {
+  const input = document.querySelector('.section-workspace__auto-markup-input');
+  const count = parseInt(input?.value) || 1;
+  
+  if (count <= 0) {
+    Notify.warning('Введите корректное количество изображений');
     return;
   }
-
-  if (drawState && ghost) {
-    const { px, py } = getRelPos(e);
-
-    const x1 = Math.min(drawState.startPx, px);
-    const y1 = Math.min(drawState.startPy, py);
-    const x2 = Math.max(drawState.startPx, px);
-    const y2 = Math.max(drawState.startPy, py);
-
-    ghost.remove();
-    ghost = null;
-    drawState = null;
-
-    if (x2 - x1 < 8 || y2 - y1 < 8) return;
-
-    const newDet = {
-      id: nextId++,
-      class_id: 0,
-      label: "Объект",
-      cls: "green",
-      conf: 1.0,
-      x1,
-      y1,
-      x2,
-      y2,
-    };
-
-    detections.push(newDet);
-    createBboxEl(newDet);
-    refreshBbox(newDet.id);
-    selectBbox(newDet.id);
-    openPopup(newDet.id, e.clientX, e.clientY);
-    setMode("select");
+  
+  // Get unlabeled images
+  const category = CATEGORIES.find(c => c.codes && c.codes.includes('unlabeled'));
+  if (!category) {
+    Notify.error('Категория "unlabeled" не найдена');
+    return;
+  }
+  
+  try {
+    // Fetch unlabeled images
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/images?status=unlabeled`);
+    if (!res.ok) throw new Error(`Failed to fetch images: ${res.status}`);
+    
+    const images = await res.json();
+    
+    if (images.length === 0) {
+      Notify.warning('Нет неразмеченных изображений');
+      return;
+    }
+    
+    // Take first N images
+    const imagesToProcess = images.slice(0, Math.min(count, images.length));
+    
+    Notify.success(`Начинаем авторазметку ${imagesToProcess.length} изображений...`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Process each image
+    for (const img of imagesToProcess) {
+      try {
+        // Call predict API
+        const predictRes = await fetch(`http://localhost:8000/api/predict/${dataset.name}/${img.filename}`, {
+          method: 'POST'
+        });
+        
+        if (!predictRes.ok) {
+          console.error(`Prediction failed for ${img.filename}:`, predictRes.status);
+          errorCount++;
+          continue;
+        }
+        
+        const predictions = await predictRes.json();
+        console.log(`Predictions for ${img.filename}:`, predictions);
+        
+        // Convert predictions to detections format
+        const detections = predictions.map((p, index) => ({
+          id: p.id || (index + 1),
+          class_id: p.class_id,
+          label: p.label || "Object",
+          cls: "blue",
+          conf: p.conf,
+          x1: p.x1,
+          y1: p.y1,
+          x2: p.x2,
+          y2: p.y2
+        }));
+        
+        // Save detections with is_auto=true flag
+        const saveRes = await fetch(`http://localhost:8000/api/images/${img.id}/detections?is_auto=true`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(detections)
+        });
+        
+        if (!saveRes.ok) {
+          console.error(`Save failed for ${img.filename}:`, saveRes.status);
+          errorCount++;
+          continue;
+        }
+        
+        const saveResult = await saveRes.json();
+        console.log(`Saved ${saveResult.count} detections for ${img.filename}`);
+        successCount++;
+        
+      } catch (err) {
+        console.error(`Error processing ${img.filename}:`, err);
+        errorCount++;
+      }
+    }
+    
+    Notify.success(`Авторазметка завершена!\nУспешно: ${successCount}\nОшибок: ${errorCount}`);
+    
+    // Reload current category to show updated images
+    loadImagesForCategory();
+    
+  } catch (err) {
+    console.error('Auto markup failed:', err);
+    Notify.error(`Ошибка авторазметки: ${err.message}`);
   }
 });
 
-document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  if (e.key === "Delete" || e.key === "Backspace") {
-    if (selectedId !== null) deleteBbox(selectedId);
+// Decision buttons (accept/reject)
+document.querySelector('.section-workspace__decision-button--accept')?.addEventListener('click', async () => {
+  if (!currentImage) return;
+  
+  try {
+    const res = await fetch(`http://localhost:8000/api/images/${currentImage.id}/accept`, {
+      method: 'POST'
+    });
+    
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    
+    // Move to next image
+    currentImages.splice(currentImageIndex, 1);
+    if (currentImages.length > 0) {
+      if (currentImageIndex >= currentImages.length) {
+        currentImageIndex = currentImages.length - 1;
+      }
+      loadImage(currentImages[currentImageIndex]);
+      renderImagesList();
+    } else {
+      loadImagesForCategory();
+    }
+  } catch (err) {
+    console.error('Failed to accept image:', err);
   }
-  if (e.key === "d" || e.key === "D") setMode("draw");
-  if (e.key === "s" || e.key === "S" || e.key === "Escape") setMode("select");
 });
 
-function setMode(m) {
-  mode = m;
-  scene.className = `detection-scene mode-${m}`;
-  btnSelect.classList.toggle("section-workspace__tool-btn--active", m === "select");
-  btnDraw.classList.toggle("section-workspace__tool-btn--active", m === "draw");
-}
-
-btnSelect.addEventListener("click", () => setMode("select"));
-btnDraw.addEventListener("click", () => setMode("draw"));
-
-function openPopup(id, cx, cy) {
-  const d = getDetection(id);
-  if (!d) return;
-  syncPopup(d);
-  popup.classList.add("open");
-
-  const pw = 220,
-  ph = 200;
-  popup.style.left = Math.min(cx + 10, window.innerWidth - pw - 10) + "px";
-  popup.style.top = Math.min(cy + 10, window.innerHeight - ph - 10) + "px";
-
-  const handler = () => {
-    const r = sceneRect();
-
-    const x1 = clamp(parseFloat(popX.value) || 0, 0, r.width);
-    const y1 = clamp(parseFloat(popY.value) || 0, 0, r.height);
-    const w = Math.max(1, parseFloat(popW.value) || 1);
-    const h = Math.max(1, parseFloat(popH.value) || 1);
-
-    updateDetection(id, {
-      label: popLabel.value || "Объект",
-      cls: popClass.value,
-      conf: clamp(parseFloat(popConf.value) || 1, 0, 1),
-      x1,
-      y1,
-      x2: clamp(x1 + w, 0, r.width),
-      y2: clamp(y1 + h, 0, r.height),
-  });
-};
-
-  [popLabel, popClass, popConf, popX, popY, popW, popH].forEach((el) => {
-    el.removeEventListener("input", el._handler);
-    el._handler = handler;
-    el.addEventListener("input", handler);
-  });
-}
-
-function syncPopup(d) {
-  popLabel.value = d.label;
-  popClass.value = d.cls;
-  popConf.value = d.conf.toFixed(2);
-  popX.value = d.x1.toFixed(0);
-  popY.value = d.y1.toFixed(0);
-  popW.value = (d.x2 - d.x1).toFixed(0);
-  popH.value = (d.y2 - d.y1).toFixed(0);
-}
-
-function closePopup() {
-  popup.classList.remove("open");
-}
-
-document.getElementById("pop-close").addEventListener("click", closePopup);
-
-btnDelSel.addEventListener("click", () => {
-  if (selectedId !== null) deleteBbox(selectedId);
+document.querySelector('.section-workspace__decision-button--reject')?.addEventListener('click', async () => {
+  if (!currentImage) return;
+  
+  try {
+    const res = await fetch(`http://localhost:8000/api/images/${currentImage.id}/reject`, {
+      method: 'POST'
+    });
+    
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    
+    // Move to next image
+    currentImages.splice(currentImageIndex, 1);
+    if (currentImages.length > 0) {
+      if (currentImageIndex >= currentImages.length) {
+        currentImageIndex = currentImages.length - 1;
+      }
+      loadImage(currentImages[currentImageIndex]);
+      renderImagesList();
+    } else {
+      loadImagesForCategory();
+    }
+  } catch (err) {
+    console.error('Failed to reject image:', err);
+  }
 });
 
+// Initialize
+updateCategory();
+
+// Expose DetectionOverlay for backward compatibility
 window.DetectionOverlay = {
-  load(data) {
-    detections = data.map((d, index) => ({
-      id: d.id ?? index + 1,
-      class_id: d.class_id ?? 0,
-      label: d.label ?? "Объект",
-      cls: d.cls ?? "green",
-      conf: d.conf ?? 1,
-      x1: d.x1,
-      y1: d.y1,
-      x2: d.x2,
-      y2: d.y2,
-  }));
-
-  nextId =
-    detections.length > 0
-      ? Math.max(...detections.map((d) => d.id)) + 1
-      : 1;
-
-  renderAll();
-},
-  hide(id) {
-    layer.querySelector(`[data-id="${id}"]`)?.classList.add("hidden");
-  },
-  show(id) {
-    layer.querySelector(`[data-id="${id}"]`)?.classList.remove("hidden");
-  },
-  select(id) {
-    selectBbox(id);
-  },
-  delete(id) {
-    deleteBbox(id);
-  },
-  getAll() {
-    return JSON.parse(JSON.stringify(detections));
-  },
-  setImage(src) {
-    document.getElementById("scene-img").src = src;
-  },
+  load: (data) => detectionsModule.load(data),
+  hide: (id) => detectionsModule.hide(id),
+  show: (id) => detectionsModule.show(id),
+  select: (id) => detectionsModule.select(id),
+  delete: (id) => detectionsModule.delete(id),
+  getAll: () => detectionsModule.getAll(),
+  setImage: (src) => detectionsModule.setImage(src)
 };
-
-renderAll();

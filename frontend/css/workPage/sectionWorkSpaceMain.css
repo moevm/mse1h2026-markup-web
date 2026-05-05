@@ -1,12 +1,20 @@
 .section-workspace__toolbar {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
   width: 100%;
   border-bottom: 1px solid #1E293B;
-  height: 60px;
+  padding: 12px 20px;
+  min-height: 60px;
+}
+
+.section-workspace__dataset-name {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
 }
 
 .section-workspace__toolbar-image-actions {
@@ -60,31 +68,74 @@
 
 .section-workspace__toolbar-server-actions {
   display: flex;
-  height: 80%;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-workspace__auto-markup-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1E293B;
+  border-radius: 8px;
+}
+
+.section-workspace__auto-markup-box label {
+  color: #94A3B8;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.section-workspace__auto-markup-input {
+  width: 80px;
+  height: 32px;
+  padding: 4px 8px;
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.section-workspace__auto-markup-input:focus {
+  border-color: #6366F1;
 }
 
 .section-workspace__toolbar-server-button {
   display: flex;
   align-items: center;
   padding: 0 20px;
+  height: 36px;
   gap: 5px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.section-workspace__toolbar-server-button--auto-markup {
+  background-color: #10B981;
+  color: #fff;
+  font-weight: 600;
+  padding: 0 16px;
+}
+
+.section-workspace__toolbar-server-button--auto-markup:hover {
+  background-color: #059669;
 }
 
 .section-workspace__toolbar-server-button--recheck {
-  background-color: #6567F1;
+  background-color: #6366F1;
   color: #fff;
-  font-weight: bold;
+  font-weight: 600;
 }
 
-.section-workspace__toolbar-server-button--aproove {
-  background-color: transparent;
-  border: 1px solid rgba(30, 41, 59, 1);
-  color: #fff;
-  font-weight: bold;
+.section-workspace__toolbar-server-button--recheck:hover {
+  background-color: #4F46E5;
 }
 
 .detection-scene {
@@ -130,9 +181,9 @@
 .bbox__border {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--color);
+  border: 2px solid;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--color) 12%, transparent);
+  background: color-mix(in srgb, #fff 12%, transparent);
   transition: background .15s;
 }
 

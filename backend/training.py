@@ -6,28 +6,28 @@ from ml_tracking import log_training_run
 
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
+    from db import BoundingBoxClass
     with Session() as session:
         dataset_row = session.get(Dataset, dataset_id)
         if not dataset_row:
             raise RuntimeError(f"dataset with id={dataset_id} not found")
-        classes_json = dataset_row.classes_json
-
-    if not classes_json:
-        raise RuntimeError("для датасета не задан список классов")
-
-    try:
-        class_names = json.loads(classes_json)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("для датасета задан некорректный classes_json") from exc
-
-    if not isinstance(class_names, list) or len(class_names) == 0:
-        raise RuntimeError("список классов датасета пуст или имеет неверный формат")
-
-    for class_name in class_names:
-        if not isinstance(class_name, str) or class_name.strip() == "":
-            raise RuntimeError("список классов датасета содержит некорректные значения")
-
-    return class_names
+        
+        # Get classes from BoundingBoxClass table
+        classes = session.query(BoundingBoxClass).filter(
+            BoundingBoxClass.dataset_id == dataset_id
+        ).order_by(BoundingBoxClass.class_id).all()
+        
+        if not classes:
+            raise RuntimeError("для датасета не задан список классов")
+        
+        # Build class names list indexed by class_id
+        max_class_id = max(c.class_id for c in classes)
+        class_names = ["unknown"] * (max_class_id + 1)
+        
+        for cls in classes:
+            class_names[cls.class_id] = cls.name
+        
+        return class_names
 
 
 def _train_and_save(

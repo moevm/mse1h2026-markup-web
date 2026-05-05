@@ -10,7 +10,8 @@ function formatTotal(n) {
 }
 
 function renderDatasetCard(dataset) {
-  const templateId = STATUS_TEMPLATE_MAP[dataset.status_id];
+  const statusId = dataset.status?.id ?? dataset.status_id;
+  const templateId = STATUS_TEMPLATE_MAP[statusId];
   const template = document.getElementById(templateId);
   
   if (!template) return null;
@@ -18,10 +19,14 @@ function renderDatasetCard(dataset) {
   const clone = template.content.cloneNode(true);
   const q = (field) => clone.querySelector(`[data-field="${field}"]`);
 
-  q("dataset-card-preview-image").src = dataset.path;
+  const previewImg = q("dataset-card-preview-image");
+  if (dataset.preview_image) {
+    previewImg.src = `http://localhost:8000${dataset.preview_image}`;
+  }
+  
   q("count-images-text").textContent = formatTotal(dataset.total_size);
   q("dataset-name").textContent = dataset.name;
-  q("dataset-last-activity").textContent = `Обновлено ${dataset.lastactivity}`;
+  q("dataset-last-activity").textContent = `Обновлено ${dataset.lastactivity || 'недавно'}`;
 
   const percent = dataset.average_percent_success ?? 0;
   q("dataset-percent").textContent = `${percent}%`;
@@ -62,7 +67,7 @@ function initFilters(datasets) {
       const filtered =
         filterStatusId === null
           ? datasets
-          : datasets.filter((d) => d.status_id === filterStatusId);
+          : datasets.filter((d) => (d.status?.id ?? d.status_id) === filterStatusId);
 
       renderDatasets(filtered);
     });
@@ -79,30 +84,30 @@ function updateMenuCounters(datasets) {
 
   for (let i = 1; i < buttons.length; i++) {
     const statusId = MENU_FILTER_MAP[i];
-    counters[i].textContent = datasets.filter((d) => d.status_id === statusId).length;
+    counters[i].textContent = datasets.filter((d) => (d.status?.id ?? d.status_id) === statusId).length;
   }
 }
 
 async function fetchDatasets() {
-  // try {
-  //   const res = await fetch("http://localhost:8020/api/getDatasets");
+  try {
+    const res = await fetch("http://localhost:8000/api/getDatasets");
 
-  //   if (!res.ok) {
-  //     throw new Error(`HTTP error: ${res.status}`);
-  //   }
+    if (!res.ok) {
+      throw new Error(`HTTP error: ${res.status}`);
+    }
 
-  //   const data = await res.json();
+    const data = await res.json();
 
-  //   if (!Array.isArray(data)) {
-  //     throw new Error("Invalid data format");
-  //   }
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid data format");
+    }
 
-  //   return data;
-  // } catch (err) {
-  //   Notify.error("Ошибка получения датасетов из API")
-  //   return DATASETS_MOCK;
-  // }
-  return DATASETS_MOCK;
+    return data;
+  } catch (err) {
+    Notify.error("Ошибка получения датасетов из API");
+    console.error(err);
+    return [];
+  }
 }
 
 async function init() {

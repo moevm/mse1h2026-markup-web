@@ -116,7 +116,8 @@ class PredictionBatch(Base):
 class PredictionBox(Base):
     __tablename__ = "prediction_box"
     id: Mapped[int] = mapped_column(primary_key=True)
-    batch_id: Mapped[int] = mapped_column(ForeignKey("prediction_batch.id"))
+    batch_id: Mapped[Optional[int]] = mapped_column(ForeignKey("prediction_batch.id"), nullable=True)
+    dataset_image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("dataset_image.id"), nullable=True)
     image_filename: Mapped[str] = mapped_column(String(255))
     class_id: Mapped[int] = mapped_column()
     confidence: Mapped[float] = mapped_column()

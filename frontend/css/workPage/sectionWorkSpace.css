@@ -1,15 +1,38 @@
 .section-workspace {
   --section-width: min(100%, 1600px);
   width: var(--section-width);
-  height: calc(100vh - 180px);
+  height: calc(100vh - 120px);
   display: flex;
   align-items: stretch;
 }
 
 .section-workspace__main {
-  width: 60%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  padding: 20px;
+  overflow-y: auto;
+  gap: 20px;
+}
+
+.section-workspace__aside {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1200px) {
+  .section-workspace {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .section-workspace__aside {
+    width: 100% !important;
+    max-height: 300px;
+  }
+  
+  .section-workspace__main {
+    width: 100%;
+  }
 }
