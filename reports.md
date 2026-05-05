@@ -60,7 +60,7 @@
 
 ## Итерация №3
 ### Презентация
-[Презентация итерация 3](TODO)
+[Презентация итерация 3](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_3.pdf)
 ### Скринкасты
 [Скринкаст](https://disk.yandex.ru/i/RNAVy1btIPEGFA)
 ### Запланированные задачи
