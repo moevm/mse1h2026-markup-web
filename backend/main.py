@@ -15,8 +15,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router)
 app.include_router(datasets_router)
+app.include_router(api_router)
 
 create_db_tables() 
 

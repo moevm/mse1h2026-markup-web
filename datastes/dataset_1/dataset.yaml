@@ -1,0 +1,19 @@
+names:
+- helmet
+- bicycle
+- car
+- motorcycle
+- unknown
+- unknown
+- unknown
+- unknown
+- unknown
+- unknown
+- unknown
+- unknown
+- unknown
+- bench
+nc: 14
+path: /mnt/datastes/dataset_1
+train: images
+val: images

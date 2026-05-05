@@ -1,6 +1,6 @@
 import { initAnimationText } from "./homePage/animationTextHomePage.js";
-import { uploadNewDataset } from "./addNewDataset.js";
-import { createPopup } from "./popup.js";
+import { uploadNewDataset } from "./utils/addNewDataset.js";
+import { createPopup } from "./utils/popup.js";
 
 function initLogicChooseDatasetButton() {
   const btn = document.querySelector('.section-datasets-choose__button--choice');

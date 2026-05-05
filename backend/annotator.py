@@ -65,8 +65,8 @@ class AutoAnnotator:
         yaml_path = os.path.join(dataset_path, "dataset.yaml")
         yaml_data = {
             "path":  os.path.abspath(dataset_path),
-            "train": ".",
-            "val":   ".",
+            "train": "images",  # ← Изображения в папке images/
+            "val":   "images",  # ← Валидация тоже там
             "nc":    len(class_names),
             "names": class_names,
         }
