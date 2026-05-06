@@ -9,7 +9,6 @@ from helper import get_annotator, invalidate_annotator
 from model_registry import get_model_by_id
 from training import _train_and_save
 
-
 _executor: ProcessPoolExecutor | None = None
 if multiprocessing.current_process().name == "MainProcess":
     _executor = ProcessPoolExecutor(max_workers=1)
@@ -78,9 +77,7 @@ def _run_train_job(job_id: int, dataset_id: int):
         raise RuntimeError("не удалось загрузить модель")
 
     _, _, model_version_id = _train_and_save(
-        dataset,
-        annotator,
-        activate_new_version=True
+        dataset, annotator, activate_new_version=True
     )
     _mark_job_done(job_id, model_version_id=model_version_id)
 
@@ -100,14 +97,13 @@ def _run_change_model_retrain_job(job_id: int, dataset_id: int):
         raise RuntimeError(f"неизвестная архитектура: {target_architecture}")
 
     annotator = AutoAnnotator(
-        model_path=model_info["weights"],
-        model_type=model_info["type"]
+        model_path=model_info["weights"], model_type=model_info["type"]
     )
     _, _, new_model_version_id = _train_and_save(
         dataset,
         annotator,
         activate_new_version=False,
-        architecture_override=target_architecture
+        architecture_override=target_architecture,
     )
 
     with Session() as session:
@@ -120,8 +116,7 @@ def _run_change_model_retrain_job(job_id: int, dataset_id: int):
             raise RuntimeError("новая версия модели не найдена после retrain")
 
         session.query(ModelVersion).filter(
-            ModelVersion.dataset_id == dataset_id,
-            ModelVersion.is_active == True
+            ModelVersion.dataset_id == dataset_id, ModelVersion.is_active == True
         ).update({"is_active": False})
 
         new_model_version.is_active = True
