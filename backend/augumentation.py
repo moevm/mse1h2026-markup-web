@@ -14,7 +14,7 @@ class ImageAugmentor:
 
         Args:
             image_path: путь к изображению
-            bboxes: список боксов в YOLO-формате 
+            bboxes: список боксов в YOLO-формате
         Returns:
             (augmented_image, augmented_bboxes)
         """
@@ -81,17 +81,15 @@ class ImageAugmentor:
         """сдвиг оттенка и насыщенности в HSV пространстве"""
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.int16)
         hsv[:, :, 0] = (hsv[:, :, 0] + random.randint(-15, 15)) % 180  # hue
-        hsv[:, :, 1] = np.clip(hsv[:, :, 1] + random.randint(-30, 30), 0, 255)  # saturation
+        hsv[:, :, 1] = np.clip(
+            hsv[:, :, 1] + random.randint(-30, 30), 0, 255
+        )  # saturation
         image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
         return image, bboxes
 
     def _sharpen(self, image, bboxes):
         """повышение резкости"""
-        kernel = np.array([
-            [0, -1, 0],
-            [-1, 5, -1],
-            [0, -1, 0]
-        ])
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         image = cv2.filter2D(image, -1, kernel)
         return image, bboxes
 
@@ -145,12 +143,14 @@ class ImageAugmentor:
             abs_w, abs_h = bw * w, bh * h
 
             # 4 угла бокса
-            corners = np.array([
-                [abs_xc - abs_w / 2, abs_yc - abs_h / 2],
-                [abs_xc + abs_w / 2, abs_yc - abs_h / 2],
-                [abs_xc + abs_w / 2, abs_yc + abs_h / 2],
-                [abs_xc - abs_w / 2, abs_yc + abs_h / 2],
-            ])
+            corners = np.array(
+                [
+                    [abs_xc - abs_w / 2, abs_yc - abs_h / 2],
+                    [abs_xc + abs_w / 2, abs_yc - abs_h / 2],
+                    [abs_xc + abs_w / 2, abs_yc + abs_h / 2],
+                    [abs_xc - abs_w / 2, abs_yc + abs_h / 2],
+                ]
+            )
 
             # применяем матрицу поворота к каждому углу
             ones = np.ones((4, 1))
@@ -174,11 +174,23 @@ class ImageAugmentor:
 
         return image, new_bboxes
 
-    def augment_dataset(self, images_dir: str, labels_dir: str, output_images_dir: str, output_labels_dir: str, max_per_image: int = 2, sample_ratio: float = 0.75):
+    def augment_dataset(
+        self,
+        images_dir: str,
+        labels_dir: str,
+        output_images_dir: str,
+        output_labels_dir: str,
+        max_per_image: int = 2,
+        sample_ratio: float = 0.75,
+    ):
         os.makedirs(output_images_dir, exist_ok=True)
         os.makedirs(output_labels_dir, exist_ok=True)
 
-        images = [f for f in os.listdir(images_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        images = [
+            f
+            for f in os.listdir(images_dir)
+            if f.lower().endswith((".jpg", ".jpeg", ".png"))
+        ]
         selected = random.sample(images, k=int(len(images) * sample_ratio))
 
         generated = 0
@@ -197,7 +209,15 @@ class ImageAugmentor:
                     parts = line.strip().split()
                     if len(parts) < 5:
                         continue
-                    bboxes.append((int(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])))
+                    bboxes.append(
+                        (
+                            int(parts[0]),
+                            float(parts[1]),
+                            float(parts[2]),
+                            float(parts[3]),
+                            float(parts[4]),
+                        )
+                    )
 
             image_path = os.path.join(images_dir, img_name)
 
@@ -205,11 +225,15 @@ class ImageAugmentor:
                 aug_image, aug_bboxes = self.augment(image_path, bboxes)
 
                 out_name = f"{stem}_aug{generated}"
-                cv2.imwrite(os.path.join(output_images_dir, out_name + ".jpg"), aug_image)
+                cv2.imwrite(
+                    os.path.join(output_images_dir, out_name + ".jpg"), aug_image
+                )
 
                 with open(os.path.join(output_labels_dir, out_name + ".txt"), "w") as f:
                     for bbox in aug_bboxes:
-                        f.write(f"{bbox[0]} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f} {bbox[4]:.6f}\n")
+                        f.write(
+                            f"{bbox[0]} {bbox[1]:.6f} {bbox[2]:.6f} {bbox[3]:.6f} {bbox[4]:.6f}\n"
+                        )
 
                 generated += 1
 

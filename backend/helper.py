@@ -1,4 +1,4 @@
-from db import Dataset, ModelVersion
+from db import Dataset, ModelVersion, TrainingConfig
 from activate import Session
 from annotator import AutoAnnotator
 from typing import Optional
@@ -10,11 +10,11 @@ _annotators: dict[int, AutoAnnotator] = {}
 
 
 def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
-    '''получение экземпляра AutoAnnotator для конкретного датасета.
+    """получение экземпляра AutoAnnotator для конкретного датасета.
     если уже есть в кеше - вернёт его.
     если нет - посмотрит в бд есть ли обученная модель,
     если есть - загрузит её веса,
-    если нет - возьмёт pretrained базовую модель по архитектуре датасета'''
+    если нет - возьмёт pretrained базовую модель по архитектуре датасета"""
 
     # 1. проверяем кеш
     if dataset_id in _annotators:
@@ -28,10 +28,20 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
 
         architecture = dataset.current_model_architecture
 
+        # Достаем девайс из базы
+        config = (
+            session.query(TrainingConfig)
+            .filter(TrainingConfig.dataset_id == dataset_id)
+            .first()
+        )
+        device = config.device if config else None
+
         # 3. ищем последнюю обученную модель для этого датасета
         last_model = (
             session.query(ModelVersion)
-            .filter(ModelVersion.dataset_id == dataset_id, ModelVersion.is_active == True)
+            .filter(
+                ModelVersion.dataset_id == dataset_id, ModelVersion.is_active == True
+            )
             .order_by(desc(ModelVersion.version))
             .first()
         )
@@ -42,8 +52,7 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
             if not model_info:
                 return None
             annotator = AutoAnnotator(
-                model_path=last_model.path,
-                model_type=model_info["type"]
+                model_path=last_model.path, model_type=model_info["type"], device=device
             )
         else:
             model_info = get_model_by_id(architecture)
@@ -51,7 +60,8 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
                 return None
             annotator = AutoAnnotator(
                 model_path=model_info["weights"],
-                model_type=model_info["type"]
+                model_type=model_info["type"],
+                device=device,
             )
 
         # 5. кладём в кеш
@@ -60,8 +70,8 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
 
 
 def invalidate_annotator(dataset_id: int):
-    '''сброс кеша для датасета.
+    """сброс кеша для датасета.
     вызывать после дообучения или смены модели,
-    чтобы при следующем запросе загрузились новые веса'''
+    чтобы при следующем запросе загрузились новые веса"""
 
     _annotators.pop(dataset_id, None)

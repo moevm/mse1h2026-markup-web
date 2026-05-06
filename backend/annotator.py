@@ -1,3 +1,4 @@
+from torch import device
 from ultralytics import YOLO, RTDETR
 from PIL import Image
 import numpy as np
@@ -6,38 +7,50 @@ import os
 import shutil
 import glob
 
+
 class AutoAnnotator:
-    '''модель'''
-    def __init__(self, model_path="yolo11n.pt", model_type: str = "YOLO"):
+    """модель"""
+
+    def __init__(
+        self,
+        model_path="yolo11n.pt",
+        model_type: str = "YOLO",
+        device: str | None = None,
+    ):
         self.model_type = model_type
+        self.device = device
         if self.model_type == "RT-DETR":
             self.model = RTDETR(model_path)
         else:
             self.model = YOLO(model_path)
 
     def predict(self, image_path: str | np.ndarray, conf: float = 0.5):
-        '''метод предикт + заданный порог уверенности'''
-        results = self.model.predict(source=image_path, conf=conf, verbose=False)
+        """метод предикт + заданный порог уверенности"""
+        results = self.model.predict(
+            source=image_path, conf=conf, verbose=False, device=self.device
+        )
         annotations = []
 
-        '''результаты'''
+        """результаты"""
         for result in results:
             for box in result.boxes:
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                annotations.append({
-                    "class_id":   int(box.cls),
-                    "class_name": self.model.names[int(box.cls)],
-                    "confidence": round(float(box.conf), 3),
-                    "x1": int(x1),
-                    "y1": int(y1),
-                    "x2": int(x2),
-                    "y2": int(y2),
-                })
+                annotations.append(
+                    {
+                        "class_id": int(box.cls),
+                        "class_name": self.model.names[int(box.cls)],
+                        "confidence": round(float(box.conf), 3),
+                        "x1": int(x1),
+                        "y1": int(y1),
+                        "x2": int(x2),
+                        "y2": int(y2),
+                    }
+                )
 
         return annotations
 
     def save_labels(self, dataset_path: str, filename: str, annotations: list[dict]):
-        '''конвертация координат в ёло формат и сохранение txt формат'''
+        """конвертация координат в ёло формат и сохранение txt формат"""
 
         # размер картинки
         image_path = os.path.join(dataset_path, filename)
@@ -54,20 +67,32 @@ class AutoAnnotator:
             for ann in annotations:
                 x_center = ((ann["x1"] + ann["x2"]) / 2) / img_w
                 y_center = ((ann["y1"] + ann["y2"]) / 2) / img_h
-                width    = (ann["x2"] - ann["x1"]) / img_w
-                height   = (ann["y2"] - ann["y1"]) / img_h
-                f.write(f"{ann['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
+                width = (ann["x2"] - ann["x1"]) / img_w
+                height = (ann["y2"] - ann["y1"]) / img_h
+                f.write(
+                    f"{ann['class_id']} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n"
+                )
 
-    def train(self, dataset_path: str, class_names: list[str], epochs: int = 10, batch_size: int = 16, learning_rate: float = 0.001, imgsz: int = 640, optimizer: str = "AdamW", augment: bool = False) -> tuple[str, int]:
-        '''дообучение модели на размеченных данных'''
+    def train(
+        self,
+        dataset_path: str,
+        class_names: list[str],
+        epochs: int = 10,
+        batch_size: int = 16,
+        learning_rate: float = 0.001,
+        imgsz: int = 640,
+        optimizer: str = "AdamW",
+        augment: bool = False,
+    ) -> tuple[str, int]:
+        """дообучение модели на размеченных данных"""
 
         # создание yaml конфига
         yaml_path = os.path.join(dataset_path, "dataset.yaml")
         yaml_data = {
-            "path":  os.path.abspath(dataset_path),
+            "path": os.path.abspath(dataset_path),
             "train": "images",  # ← Изображения в папке images/
-            "val":   "images",  # ← Валидация тоже там
-            "nc":    len(class_names),
+            "val": "images",  # ← Валидация тоже там
+            "nc": len(class_names),
             "names": class_names,
         }
         with open(yaml_path, "w") as f:
@@ -75,9 +100,13 @@ class AutoAnnotator:
 
         # запуск обучения - results содержит путь к весам
         results = self.model.train(
-            data=yaml_path, epochs=epochs,
-            imgsz=imgsz, batch=batch_size, lr0=learning_rate,
+            data=yaml_path,
+            epochs=epochs,
+            imgsz=imgsz,
+            batch=batch_size,
+            lr0=learning_rate,
             optimizer=optimizer,
+            device=self.device,
             # Явное управление гиперпараметрами аугментаций
             hsv_h=0.0 if not augment else 0.015,
             hsv_s=0.0 if not augment else 0.7,
@@ -95,7 +124,11 @@ class AutoAnnotator:
         # определяем следующую версию модели
         models_dir = os.path.join(dataset_path, "models")
         os.makedirs(models_dir, exist_ok=True)
-        existing = [f for f in os.listdir(models_dir) if f.startswith("model_v") and f.endswith(".pt")]
+        existing = [
+            f
+            for f in os.listdir(models_dir)
+            if f.startswith("model_v") and f.endswith(".pt")
+        ]
         next_version = len(existing) + 1
 
         # берём путь к лучшим весам из результатов обучения
@@ -110,8 +143,8 @@ class AutoAnnotator:
             self.model = RTDETR(model_save_path)
         else:
             self.model = YOLO(model_save_path)
-        
-        train_dirs = glob.glob('runs/detect/train*')
+
+        train_dirs = glob.glob("runs/detect/train*")
         for d in train_dirs:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -129,8 +162,8 @@ class AutoAnnotator:
                 "precision": 0.0,
                 "recall": 0.0,
                 "f1": 0.0,
-                "map50": 0.0,      # legacy-ключ
-                "map50_95": 0.0,   # legacy-ключ
+                "map50": 0.0,  # legacy-ключ
+                "map50_95": 0.0,  # legacy-ключ
                 "mean_iou": 0.0,
                 "confusion_matrix": [[0 for _ in class_names] for _ in class_names],
             }
@@ -178,10 +211,14 @@ class AutoAnnotator:
             for gt_idx, pred_idx in image_metrics["matches"]:
                 gt_class = gt_boxes[gt_idx]["class_id"]
                 pred_class = pred_boxes[pred_idx]["class_id"]
-                if 0 <= gt_class < len(class_names) and 0 <= pred_class < len(class_names):
+                if 0 <= gt_class < len(class_names) and 0 <= pred_class < len(
+                    class_names
+                ):
                     confusion_matrix[gt_class][pred_class] += 1
 
-        precision = total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
+        precision = (
+            total_tp / (total_tp + total_fp) if (total_tp + total_fp) > 0 else 0.0
+        )
         recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0.0
         f1 = (
             2 * precision * recall / (precision + recall)
@@ -213,7 +250,12 @@ class AutoAnnotator:
                     continue
                 try:
                     class_id = int(parts[0])
-                    xc, yc, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
+                    xc, yc, w, h = (
+                        float(parts[1]),
+                        float(parts[2]),
+                        float(parts[3]),
+                        float(parts[4]),
+                    )
                 except ValueError:
                     continue
 
@@ -282,7 +324,7 @@ class AutoAnnotator:
 
     @staticmethod
     def _iou(box_a: tuple, box_b: tuple) -> float:
-        '''IoU между двумя боксами (x1, y1, x2, y2)'''
+        """IoU между двумя боксами (x1, y1, x2, y2)"""
         xa = max(box_a[0], box_b[0])
         ya = max(box_a[1], box_b[1])
         xb = min(box_a[2], box_b[2])

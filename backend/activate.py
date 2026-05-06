@@ -38,17 +38,21 @@ def create_db_tables():
             image_statuses = [
                 ImageStatus(id=1, name="Не размечено", code="unlabeled"),
                 ImageStatus(id=2, name="Размечено", code="labeled"),
-                ImageStatus(id=3, name="Готово для обучения", code="ready_for_training"),
-                ImageStatus(id=4, name="Авторазмечено (требует проверки)", code="auto_labeled_pending_review"),
+                ImageStatus(
+                    id=3, name="Готово для обучения", code="ready_for_training"
+                ),
+                ImageStatus(
+                    id=4,
+                    name="Авторазмечено (требует проверки)",
+                    code="auto_labeled_pending_review",
+                ),
                 ImageStatus(id=5, name="Размечено окончательно", code="finalized"),
             ]
             session.add_all(image_statuses)
             has_changes = True
 
         interrupted_jobs = (
-            session.query(TrainingJob)
-            .filter(TrainingJob.status == "running")
-            .all()
+            session.query(TrainingJob).filter(TrainingJob.status == "running").all()
         )
         if interrupted_jobs:
             now = datetime.now(timezone.utc)

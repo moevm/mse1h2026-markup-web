@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from activate import Session
 from helper import get_annotator
-from db import Dataset, DatasetImage, PredictionBox, TrainingJob
+from db import Dataset, DatasetImage, PredictionBox, TrainingConfig, TrainingJob
 from job_runner import submit_training_job
 from typing import List
 import json
@@ -37,14 +37,14 @@ def train(dataset_name: str):
             session.query(TrainingJob)
             .filter(
                 TrainingJob.dataset_id == dataset.id,
-                TrainingJob.status.in_(["queued", "running"])
+                TrainingJob.status.in_(["queued", "running"]),
             )
             .first()
         )
         if active_job:
             raise HTTPException(
                 status_code=409,
-                detail=f"Обучение для датасета {dataset_name} уже запущено"
+                detail=f"Обучение для датасета {dataset_name} уже запущено",
             )
 
         job = TrainingJob(dataset_id=dataset.id, status="queued", job_type="train")
@@ -57,8 +57,7 @@ def train(dataset_name: str):
         submit_training_job(job_id)
     except Exception:
         raise HTTPException(
-            status_code=500,
-            detail="Не удалось поставить обучение в очередь"
+            status_code=500, detail="Не удалось поставить обучение в очередь"
         )
 
     return {"job_id": job_id, "status": "queued"}
