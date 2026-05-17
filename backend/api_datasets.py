@@ -26,18 +26,18 @@ from urllib.parse import quote
 import random
 
 DATASETS_ROOT_HOST = os.getenv("DATASETS_ROOT_HOST", "/")
-DATASETS_ROOT_CONTAINER = os.getenv("DATASETS_ROOT_CONTAINER", "/mnt/host_c")
+DATASETS_ROOT_CONTAINER = os.getenv("DATASETS_ROOT_CONTAINER", "/mnt/host")
 
 
 def resolve_container_path(user_path: str) -> str:
     user_path = user_path
     host_root = DATASETS_ROOT_HOST
-
     if not user_path.lower().startswith(host_root.lower()):
         raise ValueError(f"Путь должен находиться внутри {host_root}")
-
-    relative = user_path[len(host_root) :].lstrip("/")
-    return os.path.join(DATASETS_ROOT_CONTAINER, relative)
+    relative = user_path.replace('\\','/')
+    relative = relative[len(host_root):].lstrip("/")
+    relative = os.path.join(DATASETS_ROOT_CONTAINER, relative) 
+    return relative
 
 
 def dataset_has_labels(dataset_path: str) -> bool:

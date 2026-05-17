@@ -13,16 +13,6 @@ BASE_DIR = Path(__file__).parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
 PROJECT_ROOT = BASE_DIR.parent
 
-def convert_to_relative_path(absolute_path: str) -> str:
-    """Convert absolute path to relative path from project datastes directory"""
-    project_root_str = str(PROJECT_ROOT)
-    if absolute_path.startswith(project_root_str):
-        # Remove project root and keep the relative path starting with /datastes
-        relative = absolute_path[len(project_root_str):]
-        return relative
-    # If path is not within project, return as is
-    return absolute_path
-
 app.mount("/css", StaticFiles(directory=FRONTEND_DIR / "css"), name="css")
 app.mount("/js", StaticFiles(directory=FRONTEND_DIR / "js"), name="js")
 app.mount("/img", StaticFiles(directory=FRONTEND_DIR / "img"), name="img")
@@ -86,8 +76,7 @@ async def select_folder():
             return JSONResponse({"error": "Папка не выбрана"}, status_code=400)
 
         # Convert absolute path to relative path for Docker container
-        converted_path = convert_to_relative_path(path)
-        return JSONResponse({"path": converted_path})
+        return JSONResponse({"path": path})
 
     except subprocess.TimeoutExpired:
         return JSONResponse({"error": "Таймаут ожидания выбора папки"}, status_code=408)
