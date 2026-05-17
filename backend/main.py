@@ -1,7 +1,7 @@
 from api_predict import router as api_router
 from api_datasets import router as datasets_router
 from activate import create_db_tables
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +10,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5678", "http://localhost"],
+    allow_origins=["http://localhost:5678", "http://localhost","http://127.0.0.1:5678", "http://127.0.0.1","http://0.0.0.0:5678","http://0.0.0.0"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
