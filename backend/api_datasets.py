@@ -919,7 +919,7 @@ async def get_dataset_images(dataset_id: int, status: Optional[str] = None):
             if status_obj:
                 query = query.filter(DatasetImage.status_id == status_obj.id)
 
-        db_images = query.all()
+        db_images = query.order_by(DatasetImage.filename).all()
 
         # Get status code for each image
         result = []
