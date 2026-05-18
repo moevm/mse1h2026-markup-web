@@ -11,7 +11,7 @@ if (!currentDataset) {
 const dataset = JSON.parse(currentDataset);
 
 // Display dataset name
-document.getElementById('dataset-name').textContent = dataset.name;
+document.getElementById('dataset-name').textContent = `Выбранный датасет: ${dataset.name}`;
 
 // Initialize classes manager
 classesManager.init(dataset.id);
