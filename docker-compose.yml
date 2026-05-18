@@ -22,9 +22,7 @@ services:
       - db
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.backend
+    build: ./backend
     restart: unless-stopped
     ports:
       - "127.0.0.1:8000:8000"
@@ -34,14 +32,19 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-markup_db}
-      DATASETS_ROOT_HOST: ${DATASETS_ROOT_HOST}
+      DATASETS_ROOT_HOST: "C:"
       DATASETS_ROOT_CONTAINER: "/mnt/host"
     volumes:
-      - datasets_data:/app/datasets
-      - "${DATASETS_ROOT_HOST}:/mnt/host"
+      - "C:/:/mnt/host"
     depends_on:
       - db
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
 volumes:
   postgres_data:
-  datasets_data:

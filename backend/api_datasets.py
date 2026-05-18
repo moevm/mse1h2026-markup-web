@@ -28,6 +28,9 @@ import random
 DATASETS_ROOT_HOST = os.getenv("DATASETS_ROOT_HOST", "/")
 DATASETS_ROOT_CONTAINER = os.getenv("DATASETS_ROOT_CONTAINER", "/mnt/host")
 
+import pathlib
+
+import posixpath
 
 def resolve_container_path(user_path: str) -> str:
     user_path = user_path

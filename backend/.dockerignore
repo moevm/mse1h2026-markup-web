@@ -1,0 +1,68 @@
+# Python кэш и виртуальные окружения
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+env/
+.env
+
+# Временные и локальные файлы
+tmp/
+temp/
+*.tmp
+*.log
+*.pot
+.DS_Store
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Testing
+.pytest_cache/
+.coverage
+.mypy_cache/
+.tox/
+htmlcov/
+
+# Build и распределение
+build/
+dist/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Docker файлы
+Dockerfile
+docker-compose.yml
+docker-compose.prod.yml
+.dockerignore
+
+# Документация
+README.md
+docs/
+
+# HTTP тестирование
+http/
+dump.json
+
+# Прочее
+*.md
+.env.example
+node_modules/
+package-lock.json

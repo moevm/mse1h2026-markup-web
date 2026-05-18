@@ -13,9 +13,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./backend .
+COPY . .
 
 RUN mkdir -p datasets
 

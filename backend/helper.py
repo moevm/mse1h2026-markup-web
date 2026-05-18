@@ -36,6 +36,9 @@ def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
         )
         device = config.device if config else None
 
+        if device is not None and str(device).strip() not in ("cpu", "cuda") and not str(device).startswith("cuda:"):
+            device = "cpu"
+
         # 3. ищем последнюю обученную модель для этого датасета
         last_model = (
             session.query(ModelVersion)
