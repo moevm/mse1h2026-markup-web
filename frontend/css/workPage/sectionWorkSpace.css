@@ -15,6 +15,7 @@
   overflow-y: auto;
   gap: 20px;
   justify-content: space-between;
+  min-height: fit-content;
 }
 
 .section-workspace__aside {
