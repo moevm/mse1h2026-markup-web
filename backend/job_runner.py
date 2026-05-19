@@ -1,6 +1,6 @@
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor  # ← было ProcessPoolExecutor
 from datetime import datetime, timezone
-import multiprocessing
+import threading
 
 from activate import Session
 from annotator import AutoAnnotator
@@ -9,9 +9,16 @@ from helper import get_annotator, invalidate_annotator
 from model_registry import get_model_by_id
 from training import _train_and_save
 
-_executor: ProcessPoolExecutor | None = None
-if multiprocessing.current_process().name == "MainProcess":
-    _executor = ProcessPoolExecutor(max_workers=1)
+_executor: ThreadPoolExecutor | None = None
+_executor_lock = threading.Lock()
+
+
+def _get_executor() -> ThreadPoolExecutor:
+    global _executor
+    with _executor_lock:
+        if _executor is None:
+            _executor = ThreadPoolExecutor(max_workers=1)
+        return _executor
 
 
 def _now_utc() -> datetime:
@@ -23,7 +30,6 @@ def _mark_job_failed(job_id: int, error_message: str):
         job = session.get(TrainingJob, job_id)
         if not job:
             return
-
         job.status = "failed"
         job.error = error_message
         job.finished_at = _now_utc()
@@ -35,7 +41,6 @@ def _mark_job_done(job_id: int, model_version_id: int | None = None):
         job = session.get(TrainingJob, job_id)
         if not job:
             return
-
         job.status = "done"
         job.error = None
         job.finished_at = _now_utc()
@@ -51,7 +56,6 @@ def _start_job(job_id: int) -> tuple[int, str]:
             raise RuntimeError(f"training job id={job_id} not found")
         if job.status != "queued":
             raise RuntimeError(f"training job id={job_id} is not queued")
-
         job.status = "running"
         job.started_at = _now_utc()
         job.finished_at = None
@@ -71,13 +75,12 @@ def _get_dataset_detached(dataset_id: int) -> Dataset:
 
 def _run_train_job(job_id: int, dataset_id: int):
     dataset = _get_dataset_detached(dataset_id)
-
     annotator = get_annotator(dataset_id)
     if not annotator:
         raise RuntimeError("не удалось загрузить модель")
-
     _, _, model_version_id = _train_and_save(
-        dataset, annotator, activate_new_version=True
+        dataset, annotator, activate_new_version=True,
+        job_id=job_id, incremental=True
     )
     _mark_job_done(job_id, model_version_id=model_version_id)
 
@@ -90,20 +93,35 @@ def _run_change_model_retrain_job(job_id: int, dataset_id: int):
         if not dataset.pending_model_architecture:
             raise RuntimeError("pending_model_architecture не задана")
         target_architecture = dataset.pending_model_architecture
+        dataset_path = dataset.path
+        dataset_name = dataset.name
+        dataset_id_ = dataset.id
         session.expunge(dataset)
 
     model_info = get_model_by_id(target_architecture)
     if not model_info:
         raise RuntimeError(f"неизвестная архитектура: {target_architecture}")
 
-    annotator = AutoAnnotator(
-        model_path=model_info["weights"], model_type=model_info["type"]
+    # Создаём свежий объект Dataset без привязки к сессии
+    dataset = Dataset(
+        id=dataset_id_,
+        name=dataset_name,
+        path=dataset_path,
+        current_model_architecture=target_architecture,
     )
+
+    annotator = AutoAnnotator(
+        model_path=model_info["weights"],
+        model_type=model_info["type"]
+    )
+
     _, _, new_model_version_id = _train_and_save(
         dataset,
         annotator,
         activate_new_version=False,
         architecture_override=target_architecture,
+        job_id=job_id,
+        incremental=False,
     )
 
     with Session() as session:
@@ -116,7 +134,8 @@ def _run_change_model_retrain_job(job_id: int, dataset_id: int):
             raise RuntimeError("новая версия модели не найдена после retrain")
 
         session.query(ModelVersion).filter(
-            ModelVersion.dataset_id == dataset_id, ModelVersion.is_active == True
+            ModelVersion.dataset_id == dataset_id,
+            ModelVersion.is_active == True,
         ).update({"is_active": False})
 
         new_model_version.is_active = True
@@ -146,21 +165,18 @@ def _run_training_job(job_id: int):
 def _invalidate_annotator_after_success(job_id: int):
     with Session() as session:
         job = session.get(TrainingJob, job_id)
-        if not job:
-            return
-        if job.status != "done":
+        if not job or job.status != "done":
             return
         invalidate_annotator(job.dataset_id)
 
 
 def submit_training_job(job_id: int):
-    global _executor
+    executor = _get_executor()
     try:
-        if _executor is None:
-            _executor = ProcessPoolExecutor(max_workers=1)
-
-        future = _executor.submit(_run_training_job, job_id)
-        future.add_done_callback(lambda _: _invalidate_annotator_after_success(job_id))
+        future = executor.submit(_run_training_job, job_id)
+        future.add_done_callback(
+            lambda _: _invalidate_annotator_after_success(job_id)
+        )
     except Exception as exc:
         _mark_job_failed(job_id, f"failed to submit job: {exc}")
         raise

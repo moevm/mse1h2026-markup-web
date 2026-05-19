@@ -83,6 +83,7 @@ class AutoAnnotator:
         imgsz: int = 640,
         optimizer: str = "AdamW",
         augment: bool = False,
+        save_dir: str | None = None
     ) -> tuple[str, int]:
         """дообучение модели на размеченных данных"""
 
@@ -107,6 +108,7 @@ class AutoAnnotator:
             lr0=learning_rate,
             optimizer=optimizer,
             device=self.device,
+            workers=0,
             # Явное управление гиперпараметрами аугментаций
             hsv_h=0.0 if not augment else 0.015,
             hsv_s=0.0 if not augment else 0.7,
@@ -122,7 +124,7 @@ class AutoAnnotator:
             mixup=0.0 if not augment else 0.0,
         )
         # определяем следующую версию модели
-        models_dir = os.path.join(dataset_path, "models")
+        models_dir = os.path.join(save_dir or dataset_path, "models")
         os.makedirs(models_dir, exist_ok=True)
         existing = [
             f

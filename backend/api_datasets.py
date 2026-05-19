@@ -595,7 +595,6 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
 async def change_model(dataset_id: int, body: ChangeModelRequest):
     """запланировать смену архитектуры модели для датасета через retrain в очереди"""
 
-    # проверяем что такая модель существует в реестре
     model_info = get_model_by_id(body.architecture)
     if not model_info:
         raise HTTPException(
@@ -603,7 +602,6 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
         )
 
     job_id = None
-    has_labels = False
     with Session() as session:
         dataset = (
             session.query(Dataset)
@@ -635,7 +633,25 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
                 status_code=409, detail="архитектура уже активна для этого датасета"
             )
 
-        has_labels = dataset_has_labels(dataset.path)
+        labeled_statuses = (
+            session.query(ImageStatus)
+            .filter(
+                ImageStatus.code.in_(["labeled", "finalized", "ready_for_training"])
+            )
+            .all()
+        )
+        status_ids = [s.id for s in labeled_statuses]
+
+        has_labels = (
+            session.query(DatasetImage)
+            .filter(
+                DatasetImage.dataset_id == dataset.id,
+                DatasetImage.status_id.in_(status_ids),
+            )
+            .first()
+            is not None
+        )
+
         if not has_labels:
             dataset.current_model_architecture = body.architecture
             dataset.pending_model_architecture = None
@@ -669,7 +685,6 @@ async def change_model(dataset_id: int, body: ChangeModelRequest):
             "target_architecture": body.architecture,
         },
     )
-
 
 @router.get("/api/datasets/{dataset_id}/hyperparams")
 async def get_hyperparams(dataset_id: int):
@@ -1424,3 +1439,26 @@ async def get_available_devices():
         auto_device = "mps"
 
     return {"devices": devices, "auto_detect": auto_device}
+
+@router.get("/api/datasets/{dataset_id}/training-status")
+async def get_training_status(dataset_id: int):
+    with Session() as session:
+        job = (
+            session.query(TrainingJob)
+            .filter(TrainingJob.dataset_id == dataset_id)
+            .order_by(TrainingJob.created_at.desc())
+            .first()
+        )
+        if not job:
+            return {"status": "idle"}
+
+        return {
+            "job_id": job.id,
+            "job_type": job.job_type,
+            "status": job.status,
+            "error": job.error,
+            "created_at": job.created_at.isoformat(),
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+            "model_version_id": job.model_version_id,
+        }

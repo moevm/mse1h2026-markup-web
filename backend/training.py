@@ -1,20 +1,26 @@
+import os
+import shutil
+import tempfile
 from activate import Session
-import torch
 from helper import invalidate_annotator
 import json
-from db import Dataset, ModelVersion, TrainingConfig
+from db import (
+    Dataset, DatasetImage, ImageStatus, ModelVersion,
+    PredictionBox, TrainingConfig, BoundingBoxClass, TrainingJobImage
+)
 from ml_tracking import log_training_run
+from PIL import Image
+
+
+TRAINABLE_STATUSES = {"labeled", "ready_for_training", "finalized"}
 
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
-    from db import BoundingBoxClass
-
     with Session() as session:
         dataset_row = session.get(Dataset, dataset_id)
         if not dataset_row:
             raise RuntimeError(f"dataset with id={dataset_id} not found")
 
-        # Get classes from BoundingBoxClass table
         classes = (
             session.query(BoundingBoxClass)
             .filter(BoundingBoxClass.dataset_id == dataset_id)
@@ -25,14 +31,131 @@ def _load_dataset_class_names(dataset_id: int) -> list[str]:
         if not classes:
             raise RuntimeError("для датасета не задан список классов")
 
-        # Build class names list indexed by class_id
         max_class_id = max(c.class_id for c in classes)
         class_names = ["unknown"] * (max_class_id + 1)
-
         for cls in classes:
             class_names[cls.class_id] = cls.name
 
         return class_names
+
+
+def _get_trainable_images(dataset_id: int, incremental: bool = False) -> list[DatasetImage]:
+    """
+    Возвращает изображения с нужными статусами.
+    Если incremental=True — только те, которые ещё не участвовали ни в одном обучении.
+    """
+    with Session() as session:
+        statuses = (
+            session.query(ImageStatus)
+            .filter(ImageStatus.code.in_(TRAINABLE_STATUSES))
+            .all()
+        )
+        status_ids = {s.id for s in statuses}
+
+        query = session.query(DatasetImage).filter(
+            DatasetImage.dataset_id == dataset_id,
+            DatasetImage.status_id.in_(status_ids),
+        )
+
+        if incremental:
+            # исключаем те, что уже есть в training_job_image
+            already_trained_ids = session.query(
+                TrainingJobImage.dataset_image_id
+            ).filter(
+                TrainingJobImage.dataset_image_id == DatasetImage.id
+            ).scalar_subquery()
+
+            query = query.filter(
+                ~DatasetImage.id.in_(
+                    session.query(TrainingJobImage.dataset_image_id)
+                    .filter(
+                        TrainingJobImage.dataset_image_id == DatasetImage.id
+                    )
+                )
+            )
+
+        images = query.all()
+        for img in images:
+            session.expunge(img)
+        return images
+
+
+def _get_boxes_for_image(image_id: int) -> list[PredictionBox]:
+    with Session() as session:
+        boxes = (
+            session.query(PredictionBox)
+            .filter(PredictionBox.dataset_image_id == image_id)
+            .all()
+        )
+        for b in boxes:
+            session.expunge(b)
+        return boxes
+
+
+def _build_temp_dataset(dataset_path: str, images: list[DatasetImage]) -> str:
+    """
+    Строит временную папку со структурой YOLO:
+      tmp/
+        images/  — симлинки на оригинальные файлы
+        labels/  — txt из БД
+    """
+    tmp_dir = tempfile.mkdtemp(prefix="yolo_train_")
+    images_dir = os.path.join(tmp_dir, "images")
+    labels_dir = os.path.join(tmp_dir, "labels")
+    os.makedirs(images_dir)
+    os.makedirs(labels_dir)
+
+    for img in images:
+        src = os.path.join(dataset_path, "images", img.filename)
+        if not os.path.exists(src):
+            continue
+
+        dst = os.path.join(images_dir, img.filename)
+        os.symlink(src, dst)
+
+        boxes = _get_boxes_for_image(img.id)
+        if not boxes:
+            continue
+
+        with Image.open(src) as pil_img:
+            img_w, img_h = pil_img.size
+
+        label_lines = []
+        for box in boxes:
+            if box.x2 <= box.x1 or box.y2 <= box.y1:
+                continue
+            if box.x1 < 0 or box.y1 < 0 or box.x2 > img_w or box.y2 > img_h:
+                continue
+
+            x_center = ((box.x1 + box.x2) / 2) / img_w
+            y_center = ((box.y1 + box.y2) / 2) / img_h
+            width = (box.x2 - box.x1) / img_w
+            height = (box.y2 - box.y1) / img_h
+
+            if any(v > 1.0 for v in [x_center, y_center, width, height]):
+                continue
+
+            label_lines.append(
+                f"{box.class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
+            )
+
+        if label_lines:
+            stem = os.path.splitext(img.filename)[0]
+            with open(os.path.join(labels_dir, stem + ".txt"), "w") as f:
+                f.write("\n".join(label_lines))
+
+    return tmp_dir
+
+
+def _record_trained_images(job_id: int, images: list[DatasetImage]):
+    """Записывает в TrainingJobImage какие изображения использовались в этом джобе."""
+    with Session() as session:
+        for img in images:
+            session.add(TrainingJobImage(
+                training_job_id=job_id,
+                dataset_image_id=img.id,
+            ))
+        session.commit()
 
 
 def _train_and_save(
@@ -40,21 +163,25 @@ def _train_and_save(
     annotator,
     activate_new_version: bool = True,
     architecture_override: str | None = None,
+    job_id: int | None = None,
+    incremental: bool = False,
 ) -> tuple[str, int, int]:
-    """общий блок: достаём гиперпараметры, обучаем, считаем метрики, сохраняем версию"""
+    """
+    job_id     — если передан, записывает использованные изображения в TrainingJobImage
+    incremental — если True, берёт только изображения не участвовавшие в предыдущих джобах
+    """
 
-    # достаём гиперпараметры из бд
     with Session() as session:
         config = (
             session.query(TrainingConfig)
             .filter(TrainingConfig.dataset_id == dataset.id)
             .first()
         )
-
         last_version = (
             session.query(ModelVersion)
             .filter(
-                ModelVersion.dataset_id == dataset.id, ModelVersion.is_active == True
+                ModelVersion.dataset_id == dataset.id,
+                ModelVersion.is_active == True,
             )
             .first()
         )
@@ -62,39 +189,53 @@ def _train_and_save(
 
     class_names = _load_dataset_class_names(dataset.id)
 
+    trainable_images = _get_trainable_images(dataset.id, incremental=incremental)
+    if not trainable_images:
+        raise RuntimeError(
+            "нет новых изображений для обучения"
+            if incremental
+            else "нет изображений с подходящим статусом для обучения"
+        )
+
+    tmp_dir = _build_temp_dataset(dataset.path, trainable_images)
+
     use_augment = (
-        (
-            config.augmentation_enabled
-            and last_map is not None
-            and last_map < config.augmentation_threshold
-        )
-        if config
-        else False
-    )
+        config.augmentation_enabled
+        and last_map is not None
+        and last_map < config.augmentation_threshold
+    ) if config else False
 
-    if config:
-        model_path, version = annotator.train(
-            dataset_path=dataset.path,
-            class_names=class_names,
-            epochs=config.epochs,
-            learning_rate=config.learning_rate,
-            batch_size=config.batch_size,
-            imgsz=config.imgsz,
-            optimizer=config.optimizer,
-            augment=use_augment,
-        )
-        used_epochs = config.epochs
+    try:
+        if config:
+            model_path, version = annotator.train(
+                dataset_path=tmp_dir,
+                class_names=class_names,
+                epochs=config.epochs,
+                learning_rate=config.learning_rate,
+                batch_size=config.batch_size,
+                imgsz=config.imgsz,
+                optimizer=config.optimizer,
+                augment=use_augment,
+                save_dir=dataset.path
+            )
+            used_epochs = config.epochs
+        else:
+            model_path, version = annotator.train(
+                dataset_path=tmp_dir,
+                class_names=class_names,
+                augment=use_augment,
+                save_dir=dataset.path,
+            )
+            used_epochs = 10
 
-    else:
-        model_path, version = annotator.train(
-            dataset_path=dataset.path,
-            class_names=class_names,
-            augment=use_augment,
-        )
-        used_epochs = 10
+        metrics = annotator.evaluate(dataset_path=tmp_dir, class_names=class_names)
 
-    # валидация —> считаем метрики
-    metrics = annotator.evaluate(dataset_path=dataset.path, class_names=class_names)
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    # записываем какие изображения обучали
+    if job_id is not None:
+        _record_trained_images(job_id, trainable_images)
 
     run_id = log_training_run(
         dataset_name=dataset.name,
@@ -117,12 +258,11 @@ def _train_and_save(
         model_path=model_path,
     )
 
-    model_record_id = None
     with Session() as session:
         if activate_new_version:
-            # деактивируем старые версии для этого датасета
             session.query(ModelVersion).filter(
-                ModelVersion.dataset_id == dataset.id, ModelVersion.is_active == True
+                ModelVersion.dataset_id == dataset.id,
+                ModelVersion.is_active == True,
             ).update({"is_active": False})
 
         model_record = ModelVersion(

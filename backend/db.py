@@ -155,3 +155,12 @@ class BoundingBoxClass(Base):
     class_id: Mapped[int] = mapped_column()
     name: Mapped[str] = mapped_column(String(100))
     color: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+class TrainingJobImage(Base):
+    __tablename__ = "training_job_image"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    training_job_id: Mapped[int] = mapped_column(ForeignKey("training_job.id"))
+    dataset_image_id: Mapped[int] = mapped_column(ForeignKey("dataset_image.id"))
+    trained_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )

@@ -10,11 +10,28 @@
   flex-direction: column;
 }
 
+.section-workspace__dataset-model-name,
 .section-workspace__dataset-name {
   color: #fff;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
+}
+
+.section-workspace__dataset-model {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.section-workspace__button--change-model {
+  padding: 5px 20px;
+  border-radius: 5px;
+  border: none;
+  background-color: #6366F1;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .section-workspace__toolbar-image-actions {
@@ -215,8 +232,7 @@
 .detection-scene {
   position: relative;
   display: inline-block;
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 20px 60px rgba(0, 0, 0, .6);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 20px 60px rgba(99, 102, 241, 0.15);
   cursor: crosshair;
   user-select: none;
 }
@@ -283,6 +299,7 @@
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
+  text-shadow: 1px 1px 10px #000;
 }
 
 .bbox__conf-bar {

@@ -24,6 +24,7 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
+    shm_size: '2gb'
     ports:
       - "127.0.0.1:8000:8000"
     environment:

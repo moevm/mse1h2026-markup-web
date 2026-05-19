@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/css/workPage/sectionWorkSpace.css" />
   <link rel="stylesheet" href="/css/workPage/sectionWorkSpaceAside.css" />
   <link rel="stylesheet" href="/css/workPage/sectionWorkSpaceMain.css" />
+  <link rel="stylesheet" href="/css/workPage/modal.css" />
 </head>
 
 <body>
@@ -46,7 +47,6 @@
           </button>
         </div>
         <ul class="section-workspace__images-list" id="images-list">
-          <!-- Images will be rendered here dynamically -->
         </ul>
       </aside>
 
@@ -55,6 +55,10 @@
           <h2 class="section-workspace__dataset-name" id="dataset-name">
             Название датасета
           </h2>
+          <div class="section-workspace__dataset-model">
+            <h2 class="section-workspace__dataset-model-name" id="dataset-model"></h2>
+            <button class="section-workspace__button--change-model" id="change-model-button">Изменить модель</button>
+          </div>
           <div class="section-workspace__toolbar-image-actions">
             <button class="section-workspace__tool-btn section-workspace__tool-btn--active" id="btn-select" title="S">
               <img class="section-workspace__tool-btn-image" src="/img/svg/hand-icon.svg" alt="" />
@@ -119,7 +123,8 @@
         <div class="edit-popup" id="edit-popup">
           <div>
             <label>Метка</label>
-            <input type="text" id="pop-label" placeholder="Машина" />
+            <select id="pop-class-select"></select>
+            <input id="pop-new-label" placeholder="Название нового класса" style="display:none" />
           </div>
           <div>
             <label>Класс / цвет</label>
@@ -188,6 +193,29 @@
     <p class="footer-text">@Команда крутых перцев</p>
   </footer>
   <div></div>
+  <div class="change-model-overlay" id="change-model-overlay" style="display:none">
+  <div class="change-model-modal">
+    <div class="change-model-modal__header">
+      <h3 class="change-model-modal__title">Изменить модель</h3>
+      <button class="change-model-modal__close" id="change-model-close" aria-label="Закрыть">&times;</button>
+    </div>
+    <div class="change-model-modal__body">
+      <div class="change-model-modal__current" id="change-model-current-label">
+        Текущая модель: <strong id="change-model-current-name"></strong>
+      </div>
+      <label class="change-model-modal__label" for="change-model-select">Выберите архитектуру</label>
+      <select class="change-model-modal__select" id="change-model-select"></select>
+      <div class="change-model-modal__info" id="change-model-info">
+        <div class="change-model-modal__info-name" id="change-model-info-name"></div>
+        <div class="change-model-modal__info-desc" id="change-model-info-desc"></div>
+      </div>
+    </div>
+    <div class="change-model-modal__footer">
+      <button class="change-model-modal__btn" id="change-model-cancel">Отменить</button>
+      <button class="change-model-modal__btn change-model-modal__btn--primary" id="change-model-save">Сохранить</button>
+    </div>
+  </div>
+</div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="/js/work.js" defer></script>
 </body>
