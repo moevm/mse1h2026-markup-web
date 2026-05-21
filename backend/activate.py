@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db import Base, DatasetStatus, TrainingJob, ImageStatus, BoundingBoxClass
+from db import Base, DatasetStatus, TrainingJob, ImageStatus, BoundingBoxClass, TrainingJobImage
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timezone

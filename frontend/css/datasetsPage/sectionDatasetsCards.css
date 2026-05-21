@@ -69,12 +69,18 @@
 .section-datasets-cards__card-preview-box {
   position: relative;
   overflow: hidden;
+  height: 250px;
+  background-color: #000;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
 }
 
 .section-datasets-cards__card-image {
   overflow: hidden;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+  width: 100%;
+  height: 100%;
 }
 
 .section-datasets-cards__count-images-box {

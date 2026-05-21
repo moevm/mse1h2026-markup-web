@@ -1,0 +1,108 @@
+.change-model-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.change-model-modal {
+  background: var(--your-surface-color, #1e1e2e);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  width: 480px;
+  max-width: 95vw;
+  overflow: hidden;
+}
+
+.change-model-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.change-model-modal__close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 22px;
+  cursor: pointer;
+  opacity: 0.6;
+  line-height: 1;
+}
+.change-model-modal__close:hover { opacity: 1; }
+
+.change-model-modal__body { padding: 1.5rem; }
+
+.change-model-modal__current {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  font-size: 13px;
+  margin-bottom: 1.25rem;
+}
+
+.change-model-modal__label {
+  display: block;
+  font-size: 13px;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.change-model-modal__select {
+  width: 100%;
+  padding: 0 .75rem;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.change-model-modal__select option {
+  background: #1e1e2e;
+}
+
+.change-model-modal__info {
+  margin-top: 1rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  min-height: 52px;
+  font-size: 13px;
+}
+
+.change-model-modal__info-name { font-weight: 500; margin-bottom: 4px; }
+.change-model-modal__info-desc { opacity: 0.6; }
+
+.change-model-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.change-model-modal__btn {
+  height: 36px;
+  padding: 0 1.25rem;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: inherit;
+}
+.change-model-modal__btn:hover { background: rgba(255,255,255,0.07); }
+.change-model-modal__btn--primary {
+  background: #185FA5;
+  border-color: #185FA5;
+  color: #E6F1FB;
+}
+.change-model-modal__btn--primary:hover { background: #0C447C; }

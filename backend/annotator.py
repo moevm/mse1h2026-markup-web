@@ -66,6 +66,7 @@ class AutoAnnotator:
         imgsz: int = 640,
         optimizer: str = "AdamW",
         augment: bool = False,
+        save_dir: str | None = None
     ) -> tuple[str, int]:
         """дообучение модели на размеченных данных"""
 

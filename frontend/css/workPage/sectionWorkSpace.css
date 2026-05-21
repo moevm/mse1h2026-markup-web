@@ -11,17 +11,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
   padding: 20px;
   overflow-y: auto;
   gap: 20px;
+  justify-content: space-between;
+  min-height: fit-content;
 }
 
 .section-workspace__aside {
   flex-shrink: 0;
 }
 
-@media (max-width: 1200px) {
+/* @media (max-width: 1200px) {
   .section-workspace {
     flex-direction: column;
     height: auto;
@@ -35,4 +36,16 @@
   .section-workspace__main {
     width: 100%;
   }
+} */
+
+body::-webkit-scrollbar {
+  width: 10px;               /* ширина scrollbar */
+}
+body::-webkit-scrollbar-track {
+  background: transparent;        /* цвет дорожки */
+}
+body::-webkit-scrollbar-thumb {
+  background-color: #fff;    /* цвет плашки */
+  border-radius: 0;       /* закругления плашки */
+  border: none;  /* padding вокруг плашки */
 }

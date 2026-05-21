@@ -17,7 +17,8 @@ class DetectionsModule {
     this.HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   }
 
-  init(sceneId, layerId, popupId) {
+  init(sceneId, layerId, popupId, datasetId) {
+    this.datasetId = datasetId;
     this.scene = document.getElementById(sceneId);
     this.layer = document.getElementById(layerId);
     this.popup = document.getElementById(popupId);
@@ -308,48 +309,52 @@ class DetectionsModule {
     }
   }
 
-  onDocumentMouseUp(e) {
-    document.body.style.cursor = '';
+async onDocumentMouseUp(e) {
+  document.body.style.cursor = '';
 
-    if (this.dragState) {
-      this.dragState = null;
-      return;
-    }
-
-    if (this.drawState && this.ghost) {
-      const { px, py } = this.getRelPos(e);
-
-      const x1 = Math.min(this.drawState.startPx, px);
-      const y1 = Math.min(this.drawState.startPy, py);
-      const x2 = Math.max(this.drawState.startPx, px);
-      const y2 = Math.max(this.drawState.startPy, py);
-
-      this.ghost.remove();
-      this.ghost = null;
-      this.drawState = null;
-
-      if (x2 - x1 < 8 || y2 - y1 < 8) return;
-
-      const newDet = {
-        id: this.nextId++,
-        class_id: 0,
-        label: 'Объект',
-        cls: 'green',
-        conf: 1.0,
-        x1,
-        y1,
-        x2,
-        y2,
-      };
-
-      this.detections.push(newDet);
-      this.createBboxEl(newDet);
-      this.refreshBbox(newDet.id);
-      this.selectBbox(newDet.id);
-      this.openPopup(newDet.id, e.clientX, e.clientY);
-      this.setMode('select');
-    }
+  if (this.dragState) {
+    this.dragState = null;
+    return;
   }
+
+  if (this.drawState && this.ghost) {
+    const { px, py } = this.getRelPos(e);
+
+    const x1 = Math.min(this.drawState.startPx, px);
+    const y1 = Math.min(this.drawState.startPy, py);
+    const x2 = Math.max(this.drawState.startPx, px);
+    const y2 = Math.max(this.drawState.startPy, py);
+
+    this.ghost.remove();
+    this.ghost = null;
+    this.drawState = null;
+
+    if (x2 - x1 < 8 || y2 - y1 < 8) return;
+
+    // Загружаем классы, берём первый если есть
+    const classes = await this.loadDatasetClasses(this.datasetId);
+    const firstClass = classes[0];
+
+    const newDet = {
+      id: this.nextId++,
+      class_id: firstClass?.class_id ?? 0,
+      label: firstClass?.name ?? 'Объект',
+      cls: firstClass?.color ?? 'green',
+      conf: 1.0,
+      x1,
+      y1,
+      x2,
+      y2,
+    };
+
+    this.detections.push(newDet);
+    this.createBboxEl(newDet);
+    this.refreshBbox(newDet.id);
+    this.selectBbox(newDet.id);
+    this.openPopup(newDet.id, e.clientX, e.clientY);
+    this.setMode('select');
+  }
+}
 
   onKeyDown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -371,70 +376,137 @@ class DetectionsModule {
     btnDraw?.classList.toggle('section-workspace__tool-btn--active', m === 'draw');
   }
 
-  openPopup(id, cx, cy) {
-    const d = this.getDetection(id);
-    if (!d) return;
-    this.syncPopup(d);
-    this.popup.classList.add('open');
-
-    const pw = 220, ph = 200;
-    this.popup.style.left = Math.min(cx + 10, window.innerWidth - pw - 10) + 'px';
-    this.popup.style.top = Math.min(cy + 10, window.innerHeight - ph - 10) + 'px';
-
-    const handler = () => {
-      const r = this.sceneRect();
-      const popX = document.getElementById('pop-x');
-      const popY = document.getElementById('pop-y');
-      const popW = document.getElementById('pop-w');
-      const popH = document.getElementById('pop-h');
-      const popLabel = document.getElementById('pop-label');
-      const popClass = document.getElementById('pop-class');
-      const popConf = document.getElementById('pop-conf');
-
-      const x1 = this.clamp(parseFloat(popX.value) || 0, 0, r.width);
-      const y1 = this.clamp(parseFloat(popY.value) || 0, 0, r.height);
-      const w = Math.max(1, parseFloat(popW.value) || 1);
-      const h = Math.max(1, parseFloat(popH.value) || 1);
-
-      this.updateDetection(id, {
-        label: popLabel.value || 'Объект',
-        cls: popClass.value,
-        conf: this.clamp(parseFloat(popConf.value) || 1, 0, 1),
-        x1,
-        y1,
-        x2: this.clamp(x1 + w, 0, r.width),
-        y2: this.clamp(y1 + h, 0, r.height),
-      });
-    };
-
-    const inputs = ['pop-label', 'pop-class', 'pop-conf', 'pop-x', 'pop-y', 'pop-w', 'pop-h'];
-    inputs.forEach((inputId) => {
-      const el = document.getElementById(inputId);
-      if (el) {
-        el.removeEventListener('input', el._handler);
-        el._handler = handler;
-        el.addEventListener('input', handler);
-      }
-    });
+  async loadDatasetClasses(datasetId) {
+    try {
+      const res = await fetch(`http://localhost:8000/api/datasets/${datasetId}/classes`);
+      if (!res.ok) return [];
+      return await res.json(); // [{id, class_id, name, color}]
+    } catch { return []; }
   }
 
-  syncPopup(d) {
-    const popLabel = document.getElementById('pop-label');
-    const popClass = document.getElementById('pop-class');
-    const popConf = document.getElementById('pop-conf');
+async openPopup(id, cx, cy) {
+  const d = this.getDetection(id);
+  if (!d) return;
+
+  // Загружаем актуальные классы перед открытием
+  const classes = await this.loadDatasetClasses(this.datasetId);
+
+  this.syncPopup(d, classes);
+  this.popup.classList.add('open');
+
+  const pw = 260, ph = 220;
+  this.popup.style.left = Math.min(cx + 10, window.innerWidth - pw - 10) + 'px';
+  this.popup.style.top  = Math.min(cy + 10, window.innerHeight - ph - 10) + 'px';
+
+  const handler = () => {
+    const r = this.sceneRect();
+    const popClassSelect = document.getElementById('pop-class-select');
+    const popNewLabel    = document.getElementById('pop-new-label');
+    const popClass       = document.getElementById('pop-class');
+    const popConf        = document.getElementById('pop-conf');
     const popX = document.getElementById('pop-x');
     const popY = document.getElementById('pop-y');
     const popW = document.getElementById('pop-w');
     const popH = document.getElementById('pop-h');
 
-    if (popLabel) popLabel.value = d.label;
-    if (popClass) popClass.value = d.cls;
-    if (popConf) popConf.value = d.conf.toFixed(2);
-    if (popX) popX.value = d.x1.toFixed(0);
-    if (popY) popY.value = d.y1.toFixed(0);
-    if (popW) popW.value = (d.x2 - d.x1).toFixed(0);
-    if (popH) popH.value = (d.y2 - d.y1).toFixed(0);
+    const selectedVal = popClassSelect?.value;
+    let label, class_id;
+
+    if (selectedVal === '__new__') {
+      label    = popNewLabel?.value?.trim() || 'Объект';
+      // class_id для нового = максимальный существующий + 1
+      class_id = classes.length > 0
+        ? Math.max(...classes.map(c => c.class_id)) + 1
+        : 0;
+    } else {
+      const found = classes.find(c => String(c.class_id) === selectedVal);
+      label    = found?.name || 'Объект';
+      class_id = found?.class_id ?? 0;
+    }
+
+    const x1 = this.clamp(parseFloat(popX?.value) || 0, 0, r.width);
+    const y1 = this.clamp(parseFloat(popY?.value) || 0, 0, r.height);
+    const w  = Math.max(1, parseFloat(popW?.value) || 1);
+    const h  = Math.max(1, parseFloat(popH?.value) || 1);
+
+    this.updateDetection(id, {
+      label,
+      class_id,
+      cls: popClass?.value || 'green',
+      conf: this.clamp(parseFloat(popConf?.value) || 1, 0, 1),
+      x1,
+      y1,
+      x2: this.clamp(x1 + w, 0, r.width),
+      y2: this.clamp(y1 + h, 0, r.height),
+    });
+  };
+
+  // показать/скрыть поле нового класса
+  const popClassSelect = document.getElementById('pop-class-select');
+  const popNewLabel    = document.getElementById('pop-new-label');
+
+  popClassSelect?.removeEventListener('change', popClassSelect._changeHandler);
+  popClassSelect._changeHandler = () => {
+    if (popNewLabel) {
+      popNewLabel.style.display = popClassSelect.value === '__new__' ? 'block' : 'none';
+    }
+    handler();
+  };
+  popClassSelect?.addEventListener('change', popClassSelect._changeHandler);
+
+  const inputs = ['pop-class-select', 'pop-new-label', 'pop-class', 'pop-conf', 'pop-x', 'pop-y', 'pop-w', 'pop-h'];
+  inputs.forEach((inputId) => {
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.removeEventListener('input', el._handler);
+      el._handler = handler;
+      el.addEventListener('input', handler);
+    }
+  });
+}
+
+syncPopup(d, classes = []) {
+  const popClassSelect = document.getElementById('pop-class-select');
+  const popNewLabel    = document.getElementById('pop-new-label');
+  const popClass       = document.getElementById('pop-class');
+  const popConf        = document.getElementById('pop-conf');
+  const popX = document.getElementById('pop-x');
+  const popY = document.getElementById('pop-y');
+  const popW = document.getElementById('pop-w');
+  const popH = document.getElementById('pop-h');
+
+  // Заполняем select классами
+  if (popClassSelect) {
+    popClassSelect.innerHTML = '';
+    classes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = String(c.class_id);
+      opt.textContent = `${c.name} (id: ${c.class_id})`;
+      if (c.class_id === d.class_id) opt.selected = true;
+      popClassSelect.appendChild(opt);
+    });
+    // Опция "новый класс"
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__';
+    newOpt.textContent = '+ Новый класс';
+    if (classes.length === 0) newOpt.selected = true;
+    popClassSelect.appendChild(newOpt);
+
+    // Показываем поле нового класса если нужно
+    const isNew = popClassSelect.value === '__new__';
+    if (popNewLabel) {
+      popNewLabel.style.display = isNew ? 'block' : 'none';
+      popNewLabel.value = isNew ? d.label : '';
+    }
   }
+
+  if (popClass) popClass.value = d.cls;
+  if (popConf)  popConf.value  = d.conf.toFixed(2);
+  if (popX)     popX.value     = d.x1.toFixed(0);
+  if (popY)     popY.value     = d.y1.toFixed(0);
+  if (popW)     popW.value     = (d.x2 - d.x1).toFixed(0);
+  if (popH)     popH.value     = (d.y2 - d.y1).toFixed(0);
+}
 
   closePopup() {
     this.popup.classList.remove('open');

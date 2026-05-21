@@ -4,6 +4,7 @@
   margin-top: 20px;
   justify-content: space-between;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .section-stats-graphs__average-graph-box {
@@ -19,7 +20,7 @@
 
 .section-stats-graphs__donut-graph-box {
   background-color: rgba(15, 23, 42, 1);
-  width: 25%;
+  width: 35%;
   padding: 20px;
   border-radius: 12px;
   border: 1px solid rgba(30, 41, 59, 1);
