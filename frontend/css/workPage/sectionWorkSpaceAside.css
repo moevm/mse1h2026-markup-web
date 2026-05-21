@@ -7,15 +7,17 @@
 }
 
 .section-workspace__aside::-webkit-scrollbar {
-  width: 10px;               /* ширина scrollbar */
+  width: 10px;
 }
+
 .section-workspace__aside::-webkit-scrollbar-track {
-  background: transparent;        /* цвет дорожки */
+  background: transparent;
 }
+
 .section-workspace__aside::-webkit-scrollbar-thumb {
-  background-color: #fff;    /* цвет плашки */
-  border-radius: 0;       /* закругления плашки */
-  border: none;  /* padding вокруг плашки */
+  background-color: #fff;
+  border-radius: 0;
+  border: none;
 }
 
 .section-workspace__aside--images {
@@ -110,7 +112,7 @@
 }
 
 .section-workspace__image-card--active .section-workspace__image-title {
-  color: #000;  
+  color: #000;
 }
 
 .section-workspace__image-card--active .section-workspace__image-preview-box {
@@ -140,7 +142,7 @@
 }
 
 .section-workspace__aside--classes {
-  border-left: 1px solid #1E293B; 
+  border-left: 1px solid #1E293B;
 }
 
 .section-workspace__title {
@@ -177,10 +179,10 @@
   padding: 8px 12px;
   color: #fff;
   font-size: 14px;
-  background: #1E293B url(/img/svg/down-arrow.svg) no-repeat right 10px center;  
-  -webkit-appearance: none;  
-  -moz-appearance: none;  
-  appearance: none;  
+  background: #1E293B url(/img/svg/down-arrow.svg) no-repeat right 10px center;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   border: none;
   outline: none;
 }
@@ -219,7 +221,7 @@
 }
 
 .section-workspace__object-list-box {
-  width: 100% ;
+  width: 100%;
   padding: 17px;
   display: flex;
   flex-direction: column;
@@ -241,15 +243,17 @@
 
 
 .section-workspace__object-list::-webkit-scrollbar {
-  width: 10px;               /* ширина scrollbar */
+  width: 10px;
 }
+
 .section-workspace__object-list::-webkit-scrollbar-track {
-  background: transparent;        /* цвет дорожки */
+  background: transparent;
 }
+
 .section-workspace__object-list::-webkit-scrollbar-thumb {
-  background-color: #fff;    /* цвет плашки */
-  border-radius: 0;       /* закругления плашки */
-  border: none;  /* padding вокруг плашки */
+  background-color: #fff;
+  border-radius: 0;
+  border: none;
 }
 
 .section-workspace__object-item {
@@ -310,11 +314,11 @@
 }
 
 .section-workspace__object-sub-data--low-medium-percent {
-   background-color: rgba(249, 115, 22, 0.1);
-   color: rgba(249, 115, 22, 1);
+  background-color: rgba(249, 115, 22, 0.1);
+  color: rgba(249, 115, 22, 1);
 }
 
 .section-workspace__object-sub-data--low-percent {
-   background-color: rgba(239, 68, 68, 0.1);
-   color: rgba(239, 68, 68, 1);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 1);
 }
