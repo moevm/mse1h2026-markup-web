@@ -309,48 +309,52 @@ class DetectionsModule {
     }
   }
 
-  onDocumentMouseUp(e) {
-    document.body.style.cursor = '';
+async onDocumentMouseUp(e) {
+  document.body.style.cursor = '';
 
-    if (this.dragState) {
-      this.dragState = null;
-      return;
-    }
-
-    if (this.drawState && this.ghost) {
-      const { px, py } = this.getRelPos(e);
-
-      const x1 = Math.min(this.drawState.startPx, px);
-      const y1 = Math.min(this.drawState.startPy, py);
-      const x2 = Math.max(this.drawState.startPx, px);
-      const y2 = Math.max(this.drawState.startPy, py);
-
-      this.ghost.remove();
-      this.ghost = null;
-      this.drawState = null;
-
-      if (x2 - x1 < 8 || y2 - y1 < 8) return;
-
-      const newDet = {
-        id: this.nextId++,
-        class_id: 0,
-        label: 'Объект',
-        cls: 'green',
-        conf: 1.0,
-        x1,
-        y1,
-        x2,
-        y2,
-      };
-
-      this.detections.push(newDet);
-      this.createBboxEl(newDet);
-      this.refreshBbox(newDet.id);
-      this.selectBbox(newDet.id);
-      this.openPopup(newDet.id, e.clientX, e.clientY);
-      this.setMode('select');
-    }
+  if (this.dragState) {
+    this.dragState = null;
+    return;
   }
+
+  if (this.drawState && this.ghost) {
+    const { px, py } = this.getRelPos(e);
+
+    const x1 = Math.min(this.drawState.startPx, px);
+    const y1 = Math.min(this.drawState.startPy, py);
+    const x2 = Math.max(this.drawState.startPx, px);
+    const y2 = Math.max(this.drawState.startPy, py);
+
+    this.ghost.remove();
+    this.ghost = null;
+    this.drawState = null;
+
+    if (x2 - x1 < 8 || y2 - y1 < 8) return;
+
+    // Загружаем классы, берём первый если есть
+    const classes = await this.loadDatasetClasses(this.datasetId);
+    const firstClass = classes[0];
+
+    const newDet = {
+      id: this.nextId++,
+      class_id: firstClass?.class_id ?? 0,
+      label: firstClass?.name ?? 'Объект',
+      cls: firstClass?.color ?? 'green',
+      conf: 1.0,
+      x1,
+      y1,
+      x2,
+      y2,
+    };
+
+    this.detections.push(newDet);
+    this.createBboxEl(newDet);
+    this.refreshBbox(newDet.id);
+    this.selectBbox(newDet.id);
+    this.openPopup(newDet.id, e.clientX, e.clientY);
+    this.setMode('select');
+  }
+}
 
   onKeyDown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
