@@ -104,7 +104,7 @@ class AutoAnnotator:
             mixup=0.0 if not augment else 0.0,
         )
 
-        models_dir = os.path.join(dataset_path, "models")
+        models_dir = os.path.join(save_dir if save_dir else dataset_path, "models")
         os.makedirs(models_dir, exist_ok=True)
 
         existing_versions = []
