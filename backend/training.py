@@ -6,10 +6,11 @@ from helper import invalidate_annotator
 import json
 from db import Dataset, ModelVersion, TrainingConfig, BoundingBoxClass
 from ml_tracking import log_training_run
+
 from PIL import Image
 
+from db import ImageStatus, DatasetImage, TrainingJobImage, PredictionBox
 
-def _load_dataset_class_names(dataset_id: int) -> list[str]:
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
     with Session() as session:
@@ -43,7 +44,7 @@ def _get_trainable_images(dataset_id: int, incremental: bool = False) -> list[Da
     with Session() as session:
         statuses = (
             session.query(ImageStatus)
-            .filter(ImageStatus.code.in_(TRAINABLE_STATUSES))
+            .filter(ImageStatus.code.in_({"ready_for_training", "labeled"}))
             .all()
         )
         status_ids = {s.id for s in statuses}
@@ -227,6 +228,8 @@ def _train_and_save(
         metrics = annotator.evaluate(dataset_path=tmp_dir, class_names=class_names)
 
     finally:
+        print(f"DEBUG model_path: {model_path}")
+        print(f"DEBUG tmp_dir: {tmp_dir}")
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # записываем какие изображения обучали
