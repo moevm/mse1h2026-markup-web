@@ -1535,6 +1535,44 @@ async def get_dataset_stats(dataset_id: int):
             for v in model_versions
         ]
 
+        # История активности: последние 10 батчей авторазметки
+        batches = (
+            session.query(PredictionBatch)
+            .filter(PredictionBatch.dataset_id == dataset_id)
+            .order_by(PredictionBatch.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+        activity = []
+        for batch in batches:
+            # Количество изображений в батче
+            try:
+                filenames = json.loads(batch.image_filenames_json) if batch.image_filenames_json else []
+                images_count = len(filenames)
+            except Exception:
+                images_count = 0
+
+            # Средняя уверенность боксов батча
+            batch_boxes = (
+                session.query(PredictionBox)
+                .filter(PredictionBox.batch_id == batch.id)
+                .all()
+            )
+            batch_avg_conf = (
+                round(sum(b.confidence for b in batch_boxes) / len(batch_boxes) * 100, 1)
+                if batch_boxes else None
+            )
+
+            activity.append({
+                "batch_id": batch.id,
+                "type": "auto",
+                "images_count": images_count,
+                "avg_confidence": batch_avg_conf,
+                "architecture": batch.architecture,
+                "created_at": batch.created_at.isoformat(),
+            })
+
         return {
             "dataset_name": dataset.name,
             "total_images": total,
@@ -1545,6 +1583,7 @@ async def get_dataset_stats(dataset_id: int):
             "total_boxes": sum(class_counts.values()),
             "class_distribution": class_distribution,
             "metrics_history": metrics_history,
+            "activity": activity,
         }
 
 @router.get("/api/system/devices")

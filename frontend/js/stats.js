@@ -135,6 +135,51 @@ function renderDonutChart(distribution) {
   });
 }
 
+function formatRelativeTime(isoString) {
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (diff < 60) return `${diff} сек. назад`;
+  if (diff < 3600) return `${Math.floor(diff / 60)} мин. назад`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ч. назад`;
+  return `${Math.floor(diff / 86400)} дн. назад`;
+}
+
+function renderActivity(activity) {
+  const list = document.querySelector('.section-stats-last-activity__items');
+  list.innerHTML = '';
+
+  if (activity.length === 0) {
+    list.innerHTML = '<li class="section-stats-last-activity__item" style="padding:16px;color:#94A3B8;">Активности пока нет</li>';
+    return;
+  }
+
+  for (const entry of activity) {
+    const li = document.createElement('li');
+    li.className = 'section-stats-last-activity__item';
+    li.innerHTML = `
+      <button class="section-stats-last-activity__button" type="button">
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">
+          #BT-${entry.batch_id}
+        </span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
+          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--blue">A</span>
+          ${entry.architecture}
+        </span>
+        <span class="section-stats-last-activity__cell">
+          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--auto">Авто-разметка</span>
+        </span>
+        <span class="section-stats-last-activity__cell">${entry.images_count.toLocaleString('ru-RU')}</span>
+        <span class="section-stats-last-activity__cell ${entry.avg_confidence !== null ? 'section-stats-last-activity__cell--confidence' : 'section-stats-last-activity__cell--na'}">
+          ${entry.avg_confidence !== null ? `${entry.avg_confidence}%` : 'N/A'}
+        </span>
+        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">
+          ${formatRelativeTime(entry.created_at)}
+        </span>
+      </button>
+    `;
+    list.appendChild(li);
+  }
+}
+
 async function init() {
   const stats = await loadStats();
   if (!stats) {
@@ -145,6 +190,7 @@ async function init() {
   renderClassList(stats.class_distribution);
   renderLineChart(stats.metrics_history);
   renderDonutChart(stats.class_distribution);
+  renderActivity(stats.activity);
 }
 
 init();
