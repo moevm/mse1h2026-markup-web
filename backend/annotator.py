@@ -24,7 +24,7 @@ class AutoAnnotator:
         else:
             self.model = YOLO(model_path)
 
-    def predict(self, image_path: str | np.ndarray, conf: float = 0.5):
+    def predict(self, image_path: str | np.ndarray, conf: float = 0.25):
         """метод предикт + заданный порог уверенности"""
         results = self.model.predict(
             source=image_path, conf=conf, verbose=False, device=self.device
