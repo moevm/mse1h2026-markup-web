@@ -26,8 +26,8 @@ def get_dataset_by_name(dataset_name: str) -> Dataset:
 @router.post("/api/train/{dataset_name}", status_code=status.HTTP_202_ACCEPTED)
 def train(dataset_name: str):
     dataset = get_dataset_by_name(dataset_name)
-    images_dir = dataset.path
-    if not os.path.exists(images_dir):
+    images_dir = os.path.join(dataset.path, "images")
+    if not os.path.isdir(images_dir):
         raise HTTPException(
             status_code=404, detail=f"Изображения датасета {dataset_name} не найдены"
         )

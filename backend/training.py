@@ -4,16 +4,12 @@ import tempfile
 from activate import Session
 from helper import invalidate_annotator
 import json
-from db import (
-    Dataset, DatasetImage, ImageStatus, ModelVersion,
-    PredictionBox, TrainingConfig, BoundingBoxClass, TrainingJobImage
-)
+from db import Dataset, ModelVersion, TrainingConfig, BoundingBoxClass
 from ml_tracking import log_training_run
 from PIL import Image
 
 
-TRAINABLE_STATUSES = {"labeled", "ready_for_training", "finalized"}
-
+def _load_dataset_class_names(dataset_id: int) -> list[str]:
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
     with Session() as session:
