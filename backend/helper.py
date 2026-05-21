@@ -1,9 +1,7 @@
 from db import Dataset, ModelVersion, TrainingConfig, PredictionBatch, PredictionBox
 from activate import Session
-from annotator import AutoAnnotator
 import os
 from PIL import Image
-from typing import Optional
 from sqlalchemy import desc
 from model_registry import get_model_by_id
 import json
@@ -11,10 +9,11 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 # dataset_id -> экземпляр AutoAnnotator
-_annotators: dict[int, AutoAnnotator] = {}
+_annotators = {}
 
 
-def get_annotator(dataset_id: int) -> Optional[AutoAnnotator]:
+def get_annotator(dataset_id: int):
+    from annotator import AutoAnnotator
     """получение экземпляра AutoAnnotator для конкретного датасета.
     если уже есть в кеше - вернёт его.
     если нет - посмотрит в бд есть ли обученная модель,
