@@ -36,7 +36,8 @@ services:
       DATASETS_ROOT_HOST: "C:"
       DATASETS_ROOT_CONTAINER: "/mnt/host"
     volumes:
-      - "C:/:/mnt/host"
+      # - "C:/:/mnt/host"
+      - "/:/mnt/host"
     depends_on:
       - db
     deploy:
