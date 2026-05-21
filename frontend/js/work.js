@@ -1,4 +1,3 @@
-// Check if dataset is selected
 import { classesManager } from './managers/classesManager.js';
 import { detectionsModule } from './modules/detectionsModule.js';
 import { Notify } from './utils/notify.js'
@@ -12,11 +11,8 @@ const dataset = JSON.parse(currentDataset);
 
 console.log(dataset);
 
-// Display dataset name
 document.getElementById('dataset-name').textContent = `Выбранный датасет: ${dataset.name} #${dataset.id}`;
 document.getElementById('dataset-model').textContent = `Текущая модель: ${dataset.current_model_architecture}`;
-
-// === Retraining loader (top-right corner) ===
 
 const retrainLoader = document.createElement('div');
 retrainLoader.id = 'retrain-loader';
@@ -72,8 +68,6 @@ function hideRetrainLoader() {
   retrainLoader.style.display = 'none';
 }
 
-// === Polling для отслеживания смены модели после retrain ===
-
 let modelPollingInterval = null;
 let modelPollingTimeout = null;
 
@@ -100,8 +94,6 @@ function startModelPolling(expectedArchitecture) {
         Notify.error(`Ошибка переобучения: ${data.error || 'неизвестная ошибка'}`);
         refreshCurrentModel();
       }
-      // queued / running — продолжаем поллить
-
     } catch (err) {
       console.error('Model polling error:', err);
     }
@@ -113,7 +105,7 @@ function startModelPolling(expectedArchitecture) {
       Notify.error('Превышено время ожидания смены модели');
       refreshCurrentModel();
     }
-  }, 10 * 60 * 1000);
+  }, 45 * 60 * 1000);
 }
 
 function stopModelPolling() {
@@ -127,8 +119,6 @@ function stopModelPolling() {
   }
   hideRetrainLoader();
 }
-
-// === Refresh current model from server (storage may be stale) ===
 
 async function refreshCurrentModel() {
   try {
@@ -144,13 +134,10 @@ async function refreshCurrentModel() {
 
 refreshCurrentModel();
 
-// Initialize classes manager
 classesManager.init(dataset.id);
 
-// Initialize detections module
 detectionsModule.init('scene', 'detection-layer', 'edit-popup', dataset.id);
 
-// Setup mode buttons
 document.getElementById('btn-select')?.addEventListener('click', () => detectionsModule.setMode('select'));
 document.getElementById('btn-draw')?.addEventListener('click', () => detectionsModule.setMode('draw'));
 document.getElementById('btn-delete-sel')?.addEventListener('click', () => {
@@ -159,7 +146,6 @@ document.getElementById('btn-delete-sel')?.addEventListener('click', () => {
   }
 });
 
-// Categories for image slider
 const CATEGORIES = [
   { id: 1, name: 'В ОЖИДАНИИ', codes: ['unlabeled'] },
   { id: 2, name: 'АВТО-РАЗМЕТКА (ТРЕБУЕТ ПРОВЕРКИ)', codes: ['auto_labeled_pending_review'] },
@@ -171,7 +157,6 @@ let currentImages = [];
 let currentImageIndex = 0;
 let currentImage = null;
 
-// Category slider
 const categoryTitle = document.getElementById('current-category');
 const prevBtn = document.querySelector('.section-workspace__slider-btn--prev');
 const nextBtn = document.querySelector('.section-workspace__slider-btn--next');
@@ -409,7 +394,6 @@ async function saveDetections(imageId) {
   }
 }
 
-// Save detections button
 document.querySelector('.section-workspace__toolbar-server-button--recheck')?.addEventListener('click', async () => {
   if (!currentImage) {
     Notify.error('Нет выбранного изображения');
@@ -419,19 +403,23 @@ document.querySelector('.section-workspace__toolbar-server-button--recheck')?.ad
   const success = await saveDetections(currentImage.id);
   if (success) {
     Notify.success('Разметка сохранена успешно!');
-    currentImageIndex++;
-    if (currentImageIndex < currentImages.length) {
+
+    currentImages.splice(currentImageIndex, 1);
+    if (currentImages.length > 0) {
+      if (currentImageIndex >= currentImages.length) {
+        currentImageIndex = currentImages.length - 1;
+      }
       loadImage(currentImages[currentImageIndex]);
       renderImagesList();
     } else {
       loadImagesForCategory();
     }
+
   } else {
     Notify.error('Ошибка при сохранении разметки');
   }
 });
 
-// Auto markup button
 document.querySelector('.section-workspace__toolbar-server-button--auto-markup')?.addEventListener('click', async () => {
   const input = document.querySelector('.section-workspace__auto-markup-input');
   const count = parseInt(input?.value) || 1;
@@ -536,7 +524,6 @@ document.querySelector('.section-workspace__toolbar-server-button--auto-markup')
   }
 });
 
-// Decision buttons (accept/reject)
 document.querySelector('.section-workspace__decision-button--accept')?.addEventListener('click', async () => {
   if (!currentImage) return;
 
@@ -587,7 +574,6 @@ document.querySelector('.section-workspace__decision-button--reject')?.addEventL
   }
 });
 
-// Confidence filter settings
 let confFilterEnabled = false;
 let confFilterThreshold = 0.85;
 
@@ -640,11 +626,9 @@ document.getElementById('conf-filter-save')?.addEventListener('click', async () 
   }
 });
 
-// Initialize
 loadConfFilterConfig();
 updateCategory();
 
-// Expose DetectionOverlay for backward compatibility
 window.DetectionOverlay = {
   load: (data) => detectionsModule.load(data),
   hide: (id) => detectionsModule.hide(id),
@@ -655,10 +639,8 @@ window.DetectionOverlay = {
   setImage: (src) => detectionsModule.setImage(src)
 };
 
-// === Change Model Modal ===
-
 const changeModelOverlay = document.getElementById('change-model-overlay');
-const changeModelSelect  = document.getElementById('change-model-select');
+const changeModelSelect = document.getElementById('change-model-select');
 const changeModelInfoName = document.getElementById('change-model-info-name');
 const changeModelInfoDesc = document.getElementById('change-model-info-desc');
 
@@ -728,7 +710,6 @@ document.getElementById('change-model-save').addEventListener('click', async () 
     });
 
     if (res.status === 200) {
-      // Нет меток — модель сменилась сразу
       dataset.current_model_architecture = architecture;
       document.getElementById('dataset-model').textContent = `Текущая модель: ${architecture}`;
       document.getElementById('change-model-current-name').textContent = architecture;
@@ -736,7 +717,6 @@ document.getElementById('change-model-save').addEventListener('click', async () 
       Notify.success('Модель успешно изменена');
 
     } else if (res.status === 202) {
-      // Есть метки — запущен retrain, показываем лоадер и запускаем polling
       const data = await res.json();
       Notify.success('Переобучение поставлено в очередь. Ожидаем завершения...');
       startModelPolling(data.target_architecture);
