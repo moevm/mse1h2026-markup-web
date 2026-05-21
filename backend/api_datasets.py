@@ -20,7 +20,12 @@ from model_registry import get_all_models, get_model_by_id
 import os
 from typing import Optional
 from job_runner import submit_training_job
-from helper import get_annotator, invalidate_annotator
+from helper import (
+    get_annotator,
+    invalidate_annotator,
+    save_auto_accepted_labels,
+    complete_batch_and_update_dataset_metrics,
+)
 import json
 from urllib.parse import quote
 import random
@@ -41,7 +46,7 @@ def resolve_container_path(user_path: str) -> str:
 
 
 def dataset_has_labels(dataset_path: str) -> bool:
-    labels_dir = os.path.join(dataset_path, "labels", "train")
+    labels_dir = os.path.join(dataset_path, "labels")
     if not os.path.isdir(labels_dir):
         return False
 
@@ -53,15 +58,15 @@ def dataset_has_labels(dataset_path: str) -> bool:
 
 
 def list_dataset_images(dataset_path: str) -> list[str]:
-    if not os.path.isdir(dataset_path):
+    images_dir = os.path.join(dataset_path, "images")
+    if not os.path.isdir(images_dir):
         return []
-
     return sorted(
         [
             filename
-            for filename in os.listdir(dataset_path)
+            for filename in os.listdir(images_dir)
             if filename.lower().endswith((".jpg", ".jpeg", ".png"))
-            and os.path.isfile(os.path.join(dataset_path, filename))
+            and os.path.isfile(os.path.join(images_dir, filename))
         ]
     )
 
@@ -71,7 +76,7 @@ def get_random_image_from_dataset(dataset_path: str) -> Optional[str]:
     # Check if images are in 'images' subdirectory
     images_dir = os.path.join(dataset_path, "images")
     if os.path.isdir(images_dir):
-        images = list_dataset_images(images_dir)
+        images = list_dataset_images(dataset_path)
         if images:
             return f"images/{random.choice(images)}"
 
@@ -355,7 +360,8 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
         )
         if active_batch:
             raise HTTPException(
-                status_code=409, detail="для этого датасета уже есть активный batch"
+                status_code=409,
+                detail="для этого датасета уже есть активный batch",
             )
 
         dataset_name = dataset.name
@@ -365,16 +371,19 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
         active_model = (
             session.query(ModelVersion)
             .filter(
-                ModelVersion.dataset_id == dataset_id, ModelVersion.is_active == True
+                ModelVersion.dataset_id == dataset_id,
+                ModelVersion.is_active == True,
             )
             .order_by(ModelVersion.version.desc())
             .first()
         )
         model_version_id = active_model.id if active_model else None
 
-    if not os.path.exists(dataset_path):
+    images_dir = os.path.join(dataset_path, "images")
+    if not os.path.isdir(images_dir):
         raise HTTPException(
-            status_code=404, detail=f"изображения датасета {dataset_name} не найдены"
+            status_code=404,
+            detail=f"изображения датасета {dataset_name} не найдены",
         )
 
     annotator = get_annotator(dataset_id)
@@ -388,15 +397,18 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
             dataset_path=dataset_path,
             limit=limit,
         )
+
     if not image_filenames:
         raise HTTPException(
-            status_code=404, detail="в датасете нет изображений для batch"
+            status_code=404,
+            detail="в датасете нет изображений для batch",
         )
 
     images_payload = []
     snapshot_boxes: list[dict] = []
+
     for filename in image_filenames:
-        image_path = os.path.join(dataset_path, filename)
+        image_path = os.path.join(dataset_path, "images", filename)
         boxes = annotator.predict(image_path)
 
         response_boxes = []
@@ -410,6 +422,7 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
                 "x2": int(box["x2"]),
                 "y2": int(box["y2"]),
             }
+
             response_boxes.append(normalized_box)
             snapshot_boxes.append(
                 {
@@ -431,10 +444,14 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
             }
         )
 
+    completed_metrics = None
+    should_complete_immediately = False
+
     with Session() as session:
         session.query(Dataset).filter(
             Dataset.id == dataset_id
         ).with_for_update().first()
+
         active_batch_race = (
             session.query(PredictionBatch)
             .filter(
@@ -445,28 +462,35 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
         )
         if active_batch_race:
             raise HTTPException(
-                status_code=409, detail="для этого датасета уже есть активный batch"
+                status_code=409,
+                detail="для этого датасета уже есть активный batch",
             )
 
-        # Confidence filter: images where all boxes >= threshold are auto-accepted as GT
         config = (
             session.query(TrainingConfig)
             .filter(TrainingConfig.dataset_id == dataset_id)
             .first()
         )
-        conf_filter_enabled = config.augmentation_enabled if config else False
-        conf_threshold = float(config.augmentation_threshold) if config else 0.85
+
+        auto_accept_enabled = config.auto_accept_enabled if config else False
+        auto_accept_threshold = (
+            float(config.auto_accept_confidence_threshold)
+            if config
+            else 0.85
+        )
 
         boxes_by_filename = {img["filename"]: img["boxes"] for img in images_payload}
+
         auto_accepted_set: set[str] = set()
         review_list: list[str] = []
 
         for filename in image_filenames:
             boxes = boxes_by_filename.get(filename, [])
+
             if (
-                conf_filter_enabled
+                auto_accept_enabled
                 and boxes
-                and all(b["confidence"] >= conf_threshold for b in boxes)
+                and all(box["confidence"] >= auto_accept_threshold for box in boxes)
             ):
                 auto_accepted_set.add(filename)
             else:
@@ -489,16 +513,32 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
         )
         ready_status_id = ready_status.id if ready_status else 3
 
+        review_status = (
+            session.query(ImageStatus)
+            .filter(ImageStatus.code == "auto_labeled_pending_review")
+            .first()
+        )
+        review_status_id = review_status.id if review_status else 4
+
         for filename in image_filenames:
-            image_path = os.path.join(dataset_path, filename)
+            image_path = os.path.join(dataset_path, "images", filename)
             label_path = os.path.join(
-                dataset_path, "labels", "train", os.path.splitext(filename)[0] + ".txt"
+                dataset_path,
+                "labels",
+                os.path.splitext(filename)[0] + ".txt",
             )
+
             row = existing_images.get(filename)
-            target_status_id = ready_status_id if filename in auto_accepted_set else 4
+            target_status_id = (
+                ready_status_id
+                if filename in auto_accepted_set
+                else review_status_id
+            )
+
             if row:
                 row.image_path = image_path
                 row.label_path = label_path
+
                 if row.status_id in (1, 4):
                     row.status_id = target_status_id
             else:
@@ -514,7 +554,6 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
 
         session.flush()
 
-        # Re-fetch to get IDs for newly inserted rows
         all_images_in_db = {
             row.filename: row
             for row in session.query(DatasetImage)
@@ -525,68 +564,66 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
             .all()
         }
 
-        # Save boxes for auto-accepted images as GT (linked via dataset_image_id, no batch)
-        for box in snapshot_boxes:
-            if box["image_filename"] in auto_accepted_set:
-                img_row = all_images_in_db.get(box["image_filename"])
-                session.add(
-                    PredictionBox(
-                        dataset_image_id=img_row.id if img_row else None,
-                        image_filename=box["image_filename"],
-                        class_id=box["class_id"],
-                        confidence=box["confidence"],
-                        x1=box["x1"],
-                        y1=box["y1"],
-                        x2=box["x2"],
-                        y2=box["y2"],
-                    )
-                )
-
-        # Create batch only for images that need user review
-        batch_id = None
-        review_images_payload = [
-            img for img in images_payload if img["filename"] in set(review_list)
-        ]
-        review_snapshot_boxes = [
-            b for b in snapshot_boxes if b["image_filename"] in set(review_list)
-        ]
-
-        if review_list:
-            batch = PredictionBatch(
-                dataset_id=dataset_id,
-                model_version_id=model_version_id,
-                architecture=architecture,
-                status="active",
-                image_filenames_json=json.dumps(review_list),
+        for filename in auto_accepted_set:
+            save_auto_accepted_labels(
+                dataset_path=dataset_path,
+                filename=filename,
+                boxes=boxes_by_filename.get(filename, []),
             )
-            session.add(batch)
-            session.flush()
 
-            for box in review_snapshot_boxes:
-                session.add(
-                    PredictionBox(
-                        batch_id=batch.id,
-                        image_filename=box["image_filename"],
-                        class_id=box["class_id"],
-                        confidence=box["confidence"],
-                        x1=box["x1"],
-                        y1=box["y1"],
-                        x2=box["x2"],
-                        y2=box["y2"],
-                    )
+        batch = PredictionBatch(
+            dataset_id=dataset_id,
+            model_version_id=model_version_id,
+            architecture=architecture,
+            status="active",
+            image_filenames_json=json.dumps(image_filenames),
+            auto_accepted_filenames_json=json.dumps(sorted(auto_accepted_set)),
+            review_filenames_json=json.dumps(review_list),
+        )
+        session.add(batch)
+        session.flush()
+
+        for box in snapshot_boxes:
+            img_row = all_images_in_db.get(box["image_filename"])
+
+            session.add(
+                PredictionBox(
+                    batch_id=batch.id,
+                    dataset_image_id=img_row.id if img_row else None,
+                    image_filename=box["image_filename"],
+                    class_id=box["class_id"],
+                    confidence=box["confidence"],
+                    x1=box["x1"],
+                    y1=box["y1"],
+                    x2=box["x2"],
+                    y2=box["y2"],
                 )
+            )
 
-            batch_id = batch.id
-
+        batch_id = batch.id
+        should_complete_immediately = not review_list
         session.commit()
+
+    if should_complete_immediately:
+        completed_metrics = complete_batch_and_update_dataset_metrics(
+            dataset_id=dataset_id,
+            batch_id=batch_id,
+        )
+
+    review_images_payload = [
+        img for img in images_payload if img["filename"] in set(review_list)
+    ]
 
     return {
         "batch_id": batch_id,
         "dataset_id": dataset_id,
         "images": review_images_payload,
         "auto_accepted_count": len(auto_accepted_set),
+        "review_count": len(review_list),
+        "total_count": len(image_filenames),
+        "batch_status": "completed" if completed_metrics else "active",
+        "completed_metrics": completed_metrics,
     }
-
 
 @router.post("/api/datasets/{dataset_id}/model")
 async def change_model(dataset_id: int, body: ChangeModelRequest):

@@ -2,12 +2,11 @@ from activate import Session
 import torch
 from helper import invalidate_annotator
 import json
-from db import Dataset, ModelVersion, TrainingConfig
+from db import Dataset, ModelVersion, TrainingConfig, BoundingBoxClass
 from ml_tracking import log_training_run
 
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
-    from db import BoundingBoxClass
 
     with Session() as session:
         dataset_row = session.get(Dataset, dataset_id)

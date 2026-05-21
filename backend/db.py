@@ -74,6 +74,8 @@ class TrainingConfig(Base):
     optimizer: Mapped[str] = mapped_column(String(50), default="AdamW")
     augmentation_enabled: Mapped[bool] = mapped_column(default=True)
     augmentation_threshold: Mapped[float] = mapped_column(default=0.85)
+    auto_accept_enabled: Mapped[bool] = mapped_column(default=False)
+    auto_accept_confidence_threshold: Mapped[float] = mapped_column(default=0.85)
     device: Mapped[str] = mapped_column(String(50), default="cuda")
 
 
@@ -124,6 +126,8 @@ class PredictionBatch(Base):
     architecture: Mapped[str] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(32), default="active")
     image_filenames_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    auto_accepted_filenames_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    review_filenames_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc)
     )
