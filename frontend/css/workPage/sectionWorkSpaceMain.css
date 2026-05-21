@@ -1,20 +1,37 @@
 .section-workspace__toolbar {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
   width: 100%;
   border-bottom: 1px solid #1E293B;
   padding: 12px 20px;
   min-height: 60px;
+  flex-direction: column;
 }
 
+.section-workspace__dataset-model-name,
 .section-workspace__dataset-name {
   color: #fff;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
+}
+
+.section-workspace__dataset-model {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.section-workspace__button--change-model {
+  padding: 5px 20px;
+  border-radius: 5px;
+  border: none;
+  background-color: #6366F1;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .section-workspace__toolbar-image-actions {
@@ -69,7 +86,9 @@
 .section-workspace__toolbar-server-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  flex-direction: column;
 }
 
 .section-workspace__auto-markup-box {
@@ -80,13 +99,16 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid #1E293B;
   border-radius: 8px;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
 .section-workspace__auto-markup-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .section-workspace__auto-markup-box label {
@@ -97,10 +119,11 @@
 
 .section-workspace__conf-filter {
   display: flex;
-  flex-direction: column;
   gap: 6px;
   padding-top: 6px;
   border-top: 1px solid #1E293B;
+  width: 100%;
+  justify-content: space-around;
 }
 
 .section-workspace__conf-filter-label {
@@ -199,6 +222,7 @@
   background-color: #6366F1;
   color: #fff;
   font-weight: 600;
+  width: 100%;
 }
 
 .section-workspace__toolbar-server-button--recheck:hover {
@@ -208,9 +232,7 @@
 .detection-scene {
   position: relative;
   display: inline-block;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 20px 60px rgba(0, 0, 0, .6);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 20px 60px rgba(99, 102, 241, 0.15);
   cursor: crosshair;
   user-select: none;
 }
@@ -225,7 +247,7 @@
 
 .detection-scene img {
   display: block;
-  width: 680px;
+  width: 100%;
   max-width: 90vw;
   height: auto;
   pointer-events: none;
@@ -252,6 +274,7 @@
   border-radius: 2px;
   background: color-mix(in srgb, #fff 12%, transparent);
   transition: background .15s;
+  filter: invert(1);
 }
 
 .bbox.selected .bbox__border {
@@ -276,6 +299,7 @@
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
+  text-shadow: 1px 1px 10px #000;
 }
 
 .bbox__conf-bar {
