@@ -1,7 +1,15 @@
 .section-stats-containers {
   display: flex;
+  flex-direction: column;
   width: var(--section-width);
   margin-top: 80px;
+  gap: 16px;
+}
+
+.section-stats-containers__dataset-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
 }
 
 .section-stats-containers__list {

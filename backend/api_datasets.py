@@ -115,6 +115,37 @@ def select_batch_images_by_status(
 router = APIRouter()
 
 
+def _sync_dataset_status(session, dataset_id: int) -> None:
+    """Пересчитать status_id, inwork_size и average_percent_success датасета по текущим статусам изображений."""
+    images = session.query(DatasetImage).filter(
+        DatasetImage.dataset_id == dataset_id
+    ).all()
+    if not images:
+        return
+
+    statuses = session.query(ImageStatus).all()
+    unlabeled_ids = {s.id for s in statuses if s.code == "unlabeled"}
+    done_ids = {s.id for s in statuses if s.code in ("labeled", "ready_for_training", "finalized")}
+
+    total = len(images)
+    unlabeled_count = sum(1 for img in images if img.status_id in unlabeled_ids)
+    done_count = sum(1 for img in images if img.status_id in done_ids)
+
+    dataset = session.get(Dataset, dataset_id)
+    if not dataset:
+        return
+
+    if unlabeled_count == total:
+        dataset.status_id = 0  # Just load
+    elif done_count == total:
+        dataset.status_id = 1  # Done
+    else:
+        dataset.status_id = 3  # At work
+
+    dataset.inwork_size = total - unlabeled_count
+    dataset.average_percent_success = round(done_count / total * 100, 1) if total > 0 else 0
+
+
 class AddDatasetRequest(BaseModel):
     dataset_name: str
     path: str
@@ -1145,6 +1176,7 @@ async def save_image_detections(
             if labeled_status:
                 image.status_id = labeled_status.id
 
+        _sync_dataset_status(session, image.dataset_id)
         session.commit()
         return {"success": True, "count": len(detections)}
 
@@ -1166,6 +1198,7 @@ async def accept_image(image_id: int):
         if ready_status:
             image.status_id = ready_status.id
 
+        _sync_dataset_status(session, image.dataset_id)
         session.commit()
         return {"success": True}
 
@@ -1423,6 +1456,135 @@ async def start_training(dataset_id: int):
 
     return {"job_id": job_id, "status": "queued"}
 
+
+@router.get("/api/datasets/{dataset_id:int}/stats")
+async def get_dataset_stats(dataset_id: int):
+    """Статистика по датасету: счётчики изображений, уверенность, распределение классов, метрики модели."""
+    with Session() as session:
+        dataset = session.get(Dataset, dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Датасет не найден")
+
+        all_images = session.query(DatasetImage).filter(
+            DatasetImage.dataset_id == dataset_id
+        ).all()
+
+        statuses = session.query(ImageStatus).all()
+        unlabeled_ids = {s.id for s in statuses if s.code == "unlabeled"}
+        done_ids = {s.id for s in statuses if s.code in ("labeled", "ready_for_training", "finalized")}
+        pending_ids = {s.id for s in statuses if s.code == "auto_labeled_pending_review"}
+
+        total = len(all_images)
+        labeled = sum(1 for img in all_images if img.status_id in done_ids)
+        pending = sum(1 for img in all_images if img.status_id in pending_ids)
+        unlabeled = sum(1 for img in all_images if img.status_id in unlabeled_ids)
+
+        # Средняя уверенность по боксам датасета
+        image_ids = [img.id for img in all_images]
+        boxes = (
+            session.query(PredictionBox)
+            .filter(PredictionBox.dataset_image_id.in_(image_ids))
+            .all()
+        ) if image_ids else []
+
+        avg_conf = (
+            round(sum(b.confidence for b in boxes) / len(boxes) * 100, 1)
+            if boxes else None
+        )
+
+        # Распределение по классам
+        class_counts: dict[int, int] = {}
+        for box in boxes:
+            class_counts[box.class_id] = class_counts.get(box.class_id, 0) + 1
+
+        classes = session.query(BoundingBoxClass).filter(
+            BoundingBoxClass.dataset_id == dataset_id
+        ).all()
+        class_name_map = {c.class_id: c.name for c in classes}
+
+        total_boxes = sum(class_counts.values()) or 1
+        class_distribution = sorted(
+            [
+                {
+                    "class_id": cid,
+                    "name": class_name_map.get(cid, f"Класс {cid}"),
+                    "count": cnt,
+                    "percent": round(cnt / total_boxes * 100, 1),
+                }
+                for cid, cnt in class_counts.items()
+            ],
+            key=lambda x: x["count"],
+            reverse=True,
+        )
+
+        # История метрик по версиям модели
+        model_versions = (
+            session.query(ModelVersion)
+            .filter(ModelVersion.dataset_id == dataset_id)
+            .order_by(ModelVersion.version.asc())
+            .all()
+        )
+        metrics_history = [
+            {
+                "version": v.version,
+                "precision": v.precision,
+                "recall": v.recall,
+                "f1": v.f1,
+                "map50": v.map50,
+            }
+            for v in model_versions
+        ]
+
+        # История активности: последние 10 батчей авторазметки
+        batches = (
+            session.query(PredictionBatch)
+            .filter(PredictionBatch.dataset_id == dataset_id)
+            .order_by(PredictionBatch.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+        activity = []
+        for batch in batches:
+            # Количество изображений в батче
+            try:
+                filenames = json.loads(batch.image_filenames_json) if batch.image_filenames_json else []
+                images_count = len(filenames)
+            except Exception:
+                images_count = 0
+
+            # Средняя уверенность боксов батча
+            batch_boxes = (
+                session.query(PredictionBox)
+                .filter(PredictionBox.batch_id == batch.id)
+                .all()
+            )
+            batch_avg_conf = (
+                round(sum(b.confidence for b in batch_boxes) / len(batch_boxes) * 100, 1)
+                if batch_boxes else None
+            )
+
+            activity.append({
+                "batch_id": batch.id,
+                "type": "auto",
+                "images_count": images_count,
+                "avg_confidence": batch_avg_conf,
+                "architecture": batch.architecture,
+                "created_at": batch.created_at.isoformat(),
+            })
+
+        return {
+            "dataset_name": dataset.name,
+            "total_images": total,
+            "labeled": labeled,
+            "pending_review": pending,
+            "unlabeled": unlabeled,
+            "avg_confidence": avg_conf,
+            "total_boxes": sum(class_counts.values()),
+            "class_distribution": class_distribution,
+            "metrics_history": metrics_history,
+            "activity": activity,
+        }
 
 @router.get("/api/system/devices")
 async def get_available_devices():

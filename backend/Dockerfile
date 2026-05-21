@@ -1,13 +1,13 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y \
-    libgl1=1.7.0-1+b2 \
+    libgl1 \
     libglib2.0-0 \
-    libsm6=2:1.2.6-1 \
-    libxext6=2:1.3.4-1+b3 \
-    libxrender-dev=1:0.9.12-1 \
-    libpq-dev=17.9-0+deb13u1 \
-    gcc=4:14.2.0-1 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libpq-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
