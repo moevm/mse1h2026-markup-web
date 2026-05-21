@@ -1,146 +1,95 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>BestSoftWeb</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="shortcut icon" href="/img/svg/logo.svg" type="image/x-icon" />
+  <title>BestSoftWeb</title>
 
-    <link rel="stylesheet" href="/css/fonts/inter.css" />
-    <link rel="stylesheet" href="/css/root.css" />
-    <link rel="stylesheet" href="/css/minimize.css" />
-    <link rel="stylesheet" href="/css/app/app.css" />
-    <link rel="stylesheet" href="/css/animations.css" />
-    <link rel="stylesheet" href="/css/header/header.css" />
-    <link rel="stylesheet" href="/css/footer/footer.css" />
+  <link rel="shortcut icon" href="/img/svg/logo.svg" type="image/x-icon" />
 
-    <link rel="stylesheet" href="/css/statsPage/sectionStatsContainers.css">
-    <link rel="stylesheet" href="/css/statsPage/sectionStatsGraphs.css">
-    <link rel="stylesheet" href="/css/statsPage/sectionStatsLastActivity.css">
-    <link rel="stylesheet" href="/css/statsPage/interactions.css">
-  </head>
-  <body>
-    <header class="header">
-      <nav class="header__navigation">
-        <a class="header__link header__link--logo" href="/">BestSoftWeb</a>
-        <a class="header__link" href="/work">Рабочая область</a>
-        <a class="header__link" href="/datasets">Датасеты</a>
-        <a class="header__link header__link--profile" href="/stats"></a>
-      </nav>
-    </header>
-    <main id="app">
-      <section class="section-stats-containers">
-        <h2 class="section-stats-containers__dataset-title" id="stats-dataset-name">Загрузка...</h2>
-        <ul class="section-stats-containers__list">
-          <li class="section-stats-containers__list-item">
-            <h2 class="section-stats-containers__list-title">
-              Всего изображений
-            </h2>
-            <h3 class="section-stats-containers__list-data" id="stat-total">—</h3>
-            <input
-              class="section-stats-containers__list-input"
-              type="range"
-              disabled
-              value="100"
-            />
-          </li>
-          <li class="section-stats-containers__list-item">
-            <h2 class="section-stats-containers__list-title">Размечено</h2>
-            <h3 class="section-stats-containers__list-data" id="stat-labeled">—</h3>
-            <input
-              class="section-stats-containers__list-input"
-              id="range-labeled"
-              type="range"
-              disabled
-              value="0"
-            />
-          </li>
-          <li class="section-stats-containers__list-item">
-            <h2 class="section-stats-containers__list-title">Осталось</h2>
-            <h3 class="section-stats-containers__list-data" id="stat-remaining">—</h3>
-            <input
-              class="section-stats-containers__list-input section-stats-containers__list-input--rest"
-              id="range-remaining"
-              type="range"
-              disabled
-              value="0"
-            />
-          </li>
-          <li class="section-stats-containers__list-item">
-            <h2 class="section-stats-containers__list-title">
-              Ср. уверенность
-            </h2>
-            <h3 class="section-stats-containers__list-data" id="stat-confidence">—</h3>
-            <input
-              class="section-stats-containers__list-input section-stats-containers__list-input--avg"
-              id="range-confidence"
-              type="range"
-              disabled
-              value="0"
-            />
-          </li>
-        </ul>
-      </section>
+  <link rel="stylesheet" href="/css/fonts/inter.css" />
+  <link rel="stylesheet" href="/css/root.css" />
+  <link rel="stylesheet" href="/css/minimize.css" />
+  <link rel="stylesheet" href="/css/app/app.css" />
+  <link rel="stylesheet" href="/css/animations.css" />
+  <link rel="stylesheet" href="/css/header/header.css" />
+  <link rel="stylesheet" href="/css/footer/footer.css" />
 
-      <section class="section-stats-graphs">
-        <div class="section-stats-graphs__average-graph-box">
-          <h3 class="section-stats-graphs__graph-title">
-            F1-метрика по версиям модели
-          </h3>
-          <canvas id="averageMarkupPercentGraphCanvas"></canvas>
-        </div>
-        <div class="section-stats-graphs__donut-graph-box">
-          <h3 class="section-stats-graphs__graph-title">
-            Распределение классов
-          </h3>
-          <div class="section-stats-graphs__donut-data-place">
-            <div class="section-stats-graphs__count-classes-box">
-              <h4 class="section-stats-graphs__count-classes-text" id="stat-total-boxes">—</h4>
-              <h5 class="section-stats-graphs__count-classes-description">
-                Объектов
-              </h5>
-            </div>
-            <canvas id="donutGraphCanvas"></canvas>
+  <link rel="stylesheet" href="/css/statsPage/sectionStatsContainers.css">
+  <link rel="stylesheet" href="/css/statsPage/sectionStatsGraphs.css">
+  <link rel="stylesheet" href="/css/statsPage/sectionStatsLastActivity.css">
+  <link rel="stylesheet" href="/css/statsPage/interactions.css">
+</head>
+
+<body>
+  <header class="header">
+    <nav class="header__navigation">
+      <a class="header__link header__link--logo" href="/">BestSoftWeb</a>
+      <a class="header__link" href="/work">Рабочая область</a>
+      <a class="header__link" href="/datasets">Датасеты</a>
+      <a class="header__link header__link--profile" href="/stats"></a>
+    </nav>
+  </header>
+  <main id="app">
+    <section class="section-stats-containers">
+      <h2 class="section-stats-containers__dataset-title" id="stats-dataset-name">Загрузка...</h2>
+      <ul class="section-stats-containers__list">
+        <li class="section-stats-containers__list-item">
+          <h2 class="section-stats-containers__list-title">
+            Всего изображений
+          </h2>
+          <h3 class="section-stats-containers__list-data" id="stat-total">—</h3>
+          <input class="section-stats-containers__list-input" type="range" disabled value="100" />
+        </li>
+        <li class="section-stats-containers__list-item">
+          <h2 class="section-stats-containers__list-title">Размечено</h2>
+          <h3 class="section-stats-containers__list-data" id="stat-labeled">—</h3>
+          <input class="section-stats-containers__list-input" id="range-labeled" type="range" disabled value="0" />
+        </li>
+        <li class="section-stats-containers__list-item">
+          <h2 class="section-stats-containers__list-title">Осталось</h2>
+          <h3 class="section-stats-containers__list-data" id="stat-remaining">—</h3>
+          <input class="section-stats-containers__list-input section-stats-containers__list-input--rest"
+            id="range-remaining" type="range" disabled value="0" />
+        </li>
+        <li class="section-stats-containers__list-item">
+          <h2 class="section-stats-containers__list-title">
+            Ср. уверенность
+          </h2>
+          <h3 class="section-stats-containers__list-data" id="stat-confidence">—</h3>
+          <input class="section-stats-containers__list-input section-stats-containers__list-input--avg"
+            id="range-confidence" type="range" disabled value="0" />
+        </li>
+      </ul>
+    </section>
+
+    <section class="section-stats-graphs">
+      <div class="section-stats-graphs__donut-graph-box">
+        <h3 class="section-stats-graphs__graph-title">
+          Распределение классов
+        </h3>
+        <div class="section-stats-graphs__donut-data-place">
+          <div class="section-stats-graphs__count-classes-box">
+            <h4 class="section-stats-graphs__count-classes-text" id="stat-total-boxes">—</h4>
+            <h5 class="section-stats-graphs__count-classes-description">
+              Объектов
+            </h5>
           </div>
-          <ul class="section-stats-graphs__list-classes" id="classes-list">
-          </ul>
+          <canvas id="donutGraphCanvas"></canvas>
         </div>
-      </section>
-
-      <section class="section-stats-last-activity">
-        <div class="section-stats-last-activity__header">
-          <h3 class="section-stats-last-activity__title">
-            Журнал последней активности
-          </h3>
-          <button class="section-stats-last-activity__view-all">
-            Просмотреть всю активность
-          </button>
-        </div>
-        <div class="section-stats-last-activity__cols" aria-hidden="true">
-          <span class="section-stats-last-activity__col-label"
-            >ID датасета</span
-          >
-          <span class="section-stats-last-activity__col-label">Маркапер</span>
-          <span class="section-stats-last-activity__col-label">Тип</span>
-          <span class="section-stats-last-activity__col-label"
-            >Изображения</span
-          >
-          <span class="section-stats-last-activity__col-label"
-            >Уверенность</span
-          >
-          <span class="section-stats-last-activity__col-label">Время</span>
-        </div>
-        <ul class="section-stats-last-activity__items">
+        <ul class="section-stats-graphs__list-classes" id="classes-list">
         </ul>
-      </section>
-    </main>
-    <footer class="footer">
-      <p class="footer-text">@Команда крутых перцев</p>
-    </footer>
-    <div></div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="/js/stats.js" defer></script>
-  </body>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">
+    <p class="footer-text">@Команда крутых перцев</p>
+  </footer>
+  <div></div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="/js/stats.js" defer></script>
+</body>
+
 </html>

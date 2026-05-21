@@ -17,7 +17,7 @@ async function loadStats() {
 }
 
 function renderCounters(stats) {
-  document.getElementById('stats-dataset-name').textContent = stats.dataset_name;
+  document.getElementById('stats-dataset-name').textContent = `Статистика по датасету: ${stats.dataset_name}`;
 
   const total = stats.total_images;
   document.getElementById('stat-total').textContent = total.toLocaleString('ru-RU');
@@ -60,56 +60,7 @@ function renderClassList(distribution) {
   });
 }
 
-let lineChart = null;
 let donutChart = null;
-
-function renderLineChart(metricsHistory) {
-  const ctx = document.getElementById('averageMarkupPercentGraphCanvas');
-  if (lineChart) lineChart.destroy();
-
-  const hasData = metricsHistory.length > 0;
-  const labels = hasData ? metricsHistory.map(m => `v${m.version}`) : ['Нет данных'];
-  const data = hasData ? metricsHistory.map(m => m.f1 != null ? Math.round(m.f1 * 100) : null) : [null];
-
-  lineChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data,
-        borderColor: '#6567F1',
-        borderWidth: 3,
-        tension: 0.4,
-        fill: true,
-        backgroundColor: (ctx) => {
-          const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, 'rgba(101, 103, 241, 0.3)');
-          gradient.addColorStop(1, 'rgba(101, 103, 241, 0)');
-          return gradient;
-        },
-        pointRadius: 4,
-        spanGaps: true,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-          ticks: { color: '#6b7280' },
-        },
-        y: {
-          display: true,
-          grid: { display: false },
-          min: 0,
-          max: 100,
-          ticks: { color: '#6b7280' },
-        },
-      },
-    },
-  });
-}
 
 function renderDonutChart(distribution) {
   const ctx = document.getElementById('donutGraphCanvas').getContext('2d');
@@ -143,43 +94,6 @@ function formatRelativeTime(isoString) {
   return `${Math.floor(diff / 86400)} дн. назад`;
 }
 
-function renderActivity(activity) {
-  const list = document.querySelector('.section-stats-last-activity__items');
-  list.innerHTML = '';
-
-  if (activity.length === 0) {
-    list.innerHTML = '<li class="section-stats-last-activity__item" style="padding:16px;color:#94A3B8;">Активности пока нет</li>';
-    return;
-  }
-
-  for (const entry of activity) {
-    const li = document.createElement('li');
-    li.className = 'section-stats-last-activity__item';
-    li.innerHTML = `
-      <button class="section-stats-last-activity__button" type="button">
-        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--id">
-          #BT-${entry.batch_id}
-        </span>
-        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--marker">
-          <span class="section-stats-last-activity__avatar section-stats-last-activity__avatar--blue">A</span>
-          ${entry.architecture}
-        </span>
-        <span class="section-stats-last-activity__cell">
-          <span class="section-stats-last-activity__badge section-stats-last-activity__badge--auto">Авто-разметка</span>
-        </span>
-        <span class="section-stats-last-activity__cell">${entry.images_count.toLocaleString('ru-RU')}</span>
-        <span class="section-stats-last-activity__cell ${entry.avg_confidence !== null ? 'section-stats-last-activity__cell--confidence' : 'section-stats-last-activity__cell--na'}">
-          ${entry.avg_confidence !== null ? `${entry.avg_confidence}%` : 'N/A'}
-        </span>
-        <span class="section-stats-last-activity__cell section-stats-last-activity__cell--time">
-          ${formatRelativeTime(entry.created_at)}
-        </span>
-      </button>
-    `;
-    list.appendChild(li);
-  }
-}
-
 async function init() {
   const stats = await loadStats();
   if (!stats) {
@@ -188,9 +102,7 @@ async function init() {
   }
   renderCounters(stats);
   renderClassList(stats.class_distribution);
-  renderLineChart(stats.metrics_history);
   renderDonutChart(stats.class_distribution);
-  renderActivity(stats.activity);
 }
 
 init();
