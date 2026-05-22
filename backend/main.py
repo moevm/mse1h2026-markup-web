@@ -1,8 +1,7 @@
 from api_predict import router as api_router
 from api_datasets import router as datasets_router
 from activate import create_db_tables
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 

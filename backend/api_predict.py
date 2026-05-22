@@ -1,12 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
 from activate import Session
 from helper import get_annotator
-from db import Dataset, DatasetImage, PredictionBox, TrainingConfig, TrainingJob
+from db import Dataset, TrainingJob
 from job_runner import submit_training_job
-from typing import List
-import json
 import os
 
 router = APIRouter()

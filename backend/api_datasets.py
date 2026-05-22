@@ -33,9 +33,6 @@ import random
 DATASETS_ROOT_HOST = os.getenv("DATASETS_ROOT_HOST", "/")
 DATASETS_ROOT_CONTAINER = os.getenv("DATASETS_ROOT_CONTAINER", "/mnt/host")
 
-import pathlib
-
-import posixpath
 
 def resolve_container_path(user_path: str) -> str:
     user_path = user_path
@@ -667,6 +664,21 @@ def get_next_batch(dataset_id: int, limit: int = Query(100, ge=1, le=1000)):
         "completed_metrics": completed_metrics,
     }
 
+@router.post("/api/datasets/{dataset_id}/batches/{batch_id}/complete")
+def complete_prediction_batch(dataset_id: int, batch_id: int):
+    metrics = complete_batch_and_update_dataset_metrics(
+        dataset_id=dataset_id,
+        batch_id=batch_id,
+    )
+
+    return {
+        "status": "completed",
+        "batch_id": batch_id,
+        "dataset_id": dataset_id,
+        "metrics": metrics,
+    }
+
+
 @router.post("/api/datasets/{dataset_id}/model")
 async def change_model(dataset_id: int, body: ChangeModelRequest):
     """запланировать смену архитектуры модели для датасета через retrain в очереди"""
@@ -1130,8 +1142,10 @@ async def get_image_detections(image_id: int):
         # Get bounding boxes from prediction_box table
         boxes = (
             session.query(PredictionBox)
-            .filter(PredictionBox.dataset_image_id == image_id)
-            .all()
+            .filter(
+                PredictionBox.dataset_image_id == image_id,
+                PredictionBox.batch_id.is_(None),
+            ).all()
         )
 
         result = []
@@ -1173,22 +1187,33 @@ async def save_image_detections(
 ):
     """Save bounding boxes for an image"""
     with Session() as session:
-        # Get or create image record
         image = session.query(DatasetImage).filter(DatasetImage.id == image_id).first()
         if not image:
             raise HTTPException(status_code=404, detail="Изображение не найдено")
 
-        # Get filename for this image
+        dataset = session.query(Dataset).filter(Dataset.id == image.dataset_id).first()
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Датасет не найден")
+
         filename = image.filename
+        image_path = os.path.join(dataset.path, "images", filename)
+        label_path = os.path.join(
+            dataset.path,
+            "labels",
+            os.path.splitext(filename)[0] + ".txt",
+        )
 
-        # Delete existing boxes
+        if not os.path.exists(image_path):
+            raise HTTPException(status_code=404, detail="Файл изображения не найден")
+
         session.query(PredictionBox).filter(
-            PredictionBox.dataset_image_id == image_id
-        ).delete()
+            PredictionBox.dataset_image_id == image_id,
+            PredictionBox.batch_id.is_(None),
+        ).delete(synchronize_session=False)
 
-        # Add new boxes and auto-create classes if needed
+        label_boxes = []
+
         for det in detections:
-            # Check if class exists, if not create it
             existing_class = (
                 session.query(BoundingBoxClass)
                 .filter(
@@ -1199,15 +1224,14 @@ async def save_image_detections(
             )
 
             if not existing_class and hasattr(det, "label") and det.label:
-                # Auto-create class with label from detection
                 new_class = BoundingBoxClass(
                     dataset_id=image.dataset_id,
                     class_id=det.class_id,
                     name=det.label,
-                    color="#3B82F6",  # Default blue color
+                    color="#3B82F6",
                 )
                 session.add(new_class)
-                session.flush()  # Flush to make it available immediately
+                session.flush()
 
             box = PredictionBox(
                 dataset_image_id=image_id,
@@ -1221,9 +1245,27 @@ async def save_image_detections(
             )
             session.add(box)
 
-        # Update image status based on whether it's auto or manual
+            label_boxes.append(
+                {
+                    "class_id": int(det.class_id),
+                    "confidence": float(det.conf),
+                    "x1": float(det.x1),
+                    "y1": float(det.y1),
+                    "x2": float(det.x2),
+                    "y2": float(det.y2),
+                }
+            )
+
+        save_auto_accepted_labels(
+            dataset_path=dataset.path,
+            filename=filename,
+            boxes=label_boxes,
+        )
+
+        image.image_path = image_path
+        image.label_path = label_path
+
         if is_auto:
-            # Auto-labeled images need review
             auto_status = (
                 session.query(ImageStatus)
                 .filter(ImageStatus.code == "auto_labeled_pending_review")
@@ -1232,7 +1274,6 @@ async def save_image_detections(
             if auto_status:
                 image.status_id = auto_status.id
         else:
-            # Manually labeled images are marked as labeled
             labeled_status = (
                 session.query(ImageStatus).filter(ImageStatus.code == "labeled").first()
             )
@@ -1241,18 +1282,55 @@ async def save_image_detections(
 
         _sync_dataset_status(session, image.dataset_id)
         session.commit()
-        return {"success": True, "count": len(detections)}
-
+        return {"success": True, "count": len(detections), "label_path": label_path}
+    
 
 @router.post("/api/images/{image_id:int}/accept")
 async def accept_image(image_id: int):
-    """Accept auto-labeled image"""
+    """Принять auto-labeled image и убедиться, что GT label-файл существует."""
     with Session() as session:
         image = session.query(DatasetImage).filter(DatasetImage.id == image_id).first()
         if not image:
             raise HTTPException(status_code=404, detail="Изображение не найдено")
 
-        # Change status to ready_for_training
+        dataset = session.query(Dataset).filter(Dataset.id == image.dataset_id).first()
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Датасет не найден")
+
+        boxes = (
+            session.query(PredictionBox)
+            .filter(
+                PredictionBox.dataset_image_id == image_id,
+                PredictionBox.batch_id.is_(None),
+            )
+            .all()
+        )
+
+        label_boxes = [
+            {
+                "class_id": box.class_id,
+                "confidence": box.confidence,
+                "x1": box.x1,
+                "y1": box.y1,
+                "x2": box.x2,
+                "y2": box.y2,
+            }
+            for box in boxes
+        ]
+
+        save_auto_accepted_labels(
+            dataset_path=dataset.path,
+            filename=image.filename,
+            boxes=label_boxes,
+        )
+
+        image.image_path = os.path.join(dataset.path, "images", image.filename)
+        image.label_path = os.path.join(
+            dataset.path,
+            "labels",
+            os.path.splitext(image.filename)[0] + ".txt",
+        )
+
         ready_status = (
             session.query(ImageStatus)
             .filter(ImageStatus.code == "ready_for_training")
@@ -1263,32 +1341,52 @@ async def accept_image(image_id: int):
 
         _sync_dataset_status(session, image.dataset_id)
         session.commit()
-        return {"success": True}
+
+        return {
+            "success": True,
+            "label_path": image.label_path,
+        }
 
 
 @router.post("/api/images/{image_id:int}/reject")
 async def reject_image(image_id: int):
-    """Reject auto-labeled image"""
+    """Отклонить auto-labeled image, вернуть в unlabeled и удалить временную разметку."""
     with Session() as session:
         image = session.query(DatasetImage).filter(DatasetImage.id == image_id).first()
         if not image:
             raise HTTPException(status_code=404, detail="Изображение не найдено")
 
-        # Change status back to unlabeled and delete boxes
+        dataset = session.query(Dataset).filter(Dataset.id == image.dataset_id).first()
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Датасет не найден")
+
         unlabeled_status = (
-            session.query(ImageStatus).filter(ImageStatus.code == "unlabeled").first()
+            session.query(ImageStatus)
+            .filter(ImageStatus.code == "unlabeled")
+            .first()
         )
         if unlabeled_status:
             image.status_id = unlabeled_status.id
 
-        # Delete prediction boxes
         session.query(PredictionBox).filter(
-            PredictionBox.dataset_image_id == image_id
-        ).delete()
+            PredictionBox.dataset_image_id == image_id,
+            PredictionBox.batch_id.is_(None),
+        ).delete(synchronize_session=False)
 
+        label_path = os.path.join(
+            dataset.path,
+            "labels",
+            os.path.splitext(image.filename)[0] + ".txt",
+        )
+        if os.path.exists(label_path):
+            os.remove(label_path)
+
+        image.label_path = None
+
+        _sync_dataset_status(session, image.dataset_id)
         session.commit()
-        return {"success": True}
 
+        return {"success": True}
 
 @router.get("/api/datasets/{dataset_id:int}/classes")
 async def get_dataset_classes(dataset_id: int):
@@ -1301,14 +1399,18 @@ async def get_dataset_classes(dataset_id: int):
         classes = (
             session.query(BoundingBoxClass)
             .filter(BoundingBoxClass.dataset_id == dataset_id)
+            .order_by(BoundingBoxClass.class_id)
             .all()
         )
-
         return [
-            {"id": cls.id, "name": cls.name, "color": cls.color or "#3B82F6"}
+            {
+                "id": cls.id,
+                "class_id": cls.class_id,
+                "name": cls.name,
+                "color": cls.color or "#3B82F6",
+            }
             for cls in classes
         ]
-
 
 class AddClassRequest(BaseModel):
     class_id: int
@@ -1376,23 +1478,40 @@ async def delete_dataset_class(dataset_id: int, class_id: int):
 
 @router.post("/api/datasets/{dataset_id:int}/prepare-training")
 async def prepare_training_data(dataset_id: int):
-    """Prepare training data by converting DB annotations to YOLO format"""
-    from PIL import Image
+    """
+    Проверяет готовность данных к обучению.
 
+    В новой архитектуре GT-разметка хранится в dataset.path/labels/*.txt.
+    Этот endpoint больше не конвертирует PredictionBox в labels, чтобы не
+    перезаписывать настоящие GT label-файлы временными prediction snapshot.
+    """
+    from PIL import Image
     with Session() as session:
         dataset = session.query(Dataset).filter(Dataset.id == dataset_id).first()
         if not dataset:
             raise HTTPException(status_code=404, detail="Датасет не найден")
 
-        # Get all labeled images (labeled, finalized, ready_for_training)
-        labeled_statuses = (
+        images_dir = os.path.join(dataset.path, "images")
+        labels_dir = os.path.join(dataset.path, "labels")
+
+        if not os.path.isdir(images_dir):
+            raise HTTPException(
+                status_code=400,
+                detail="Папка images не найдена для датасета",
+            )
+
+        os.makedirs(labels_dir, exist_ok=True)
+
+        trainable_statuses = (
             session.query(ImageStatus)
             .filter(
-                ImageStatus.code.in_(["labeled", "finalized", "ready_for_training"])
+                ImageStatus.code.in_(
+                    ["labeled", "finalized", "ready_for_training"]
+                )
             )
             .all()
         )
-        status_ids = [s.id for s in labeled_statuses]
+        status_ids = [status.id for status in trainable_statuses]
 
         images = (
             session.query(DatasetImage)
@@ -1403,84 +1522,57 @@ async def prepare_training_data(dataset_id: int):
             .all()
         )
 
-        if len(images) == 0:
+        if not images:
             raise HTTPException(
-                status_code=400, detail="Нет размеченных изображений для обучения"
+                status_code=400,
+                detail="Нет изображений со статусом, подходящим для обучения",
             )
 
-        # Create labels directory next to images (same level)
-        labels_dir = os.path.join(dataset.path, "labels")
-        os.makedirs(labels_dir, exist_ok=True)
+        ready_count = 0
+        missing_labels = []
+        missing_images = []
 
-        # Convert annotations to YOLO format
-        converted_count = 0
-        for img in images:
-            # Get image dimensions
-            image_path = os.path.join(dataset.path, "images", img.filename)
+        for image in images:
+            image_path = os.path.join(dataset.path, "images", image.filename)
+            label_path = os.path.join(
+                dataset.path,
+                "labels",
+                os.path.splitext(image.filename)[0] + ".txt",
+            )
+
+            image.image_path = image_path
+            image.label_path = label_path
+
             if not os.path.exists(image_path):
+                missing_images.append(image.filename)
                 continue
 
-            with Image.open(image_path) as pil_img:
-                img_w, img_h = pil_img.size
+            if not os.path.exists(label_path):
+                missing_labels.append(image.filename)
+                continue
 
-            # Get bounding boxes
-            boxes = (
-                session.query(PredictionBox)
-                .filter(PredictionBox.dataset_image_id == img.id)
-                .all()
+            ready_count += 1
+
+        session.commit()
+
+        if ready_count == 0:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Нет готовых изображений с GT label-файлами",
+                    "missing_images": missing_images,
+                    "missing_labels": missing_labels,
+                },
             )
-
-            if len(boxes) == 0:
-                continue
-
-            # Convert to YOLO format
-            label_lines = []
-            for box in boxes:
-                # Skip boxes that are completely outside image bounds
-                if box.x1 >= img_w or box.y1 >= img_h or box.x2 <= 0 or box.y2 <= 0:
-                    continue
-
-                # Skip boxes with invalid coordinates
-                if box.x1 < 0 or box.y1 < 0 or box.x2 > img_w or box.y2 > img_h:
-                    print(
-                        f"Warning: Skipping invalid box for {img.filename}: x1={box.x1}, y1={box.y1}, x2={box.x2}, y2={box.y2}, img_size={img_w}x{img_h}"
-                    )
-                    continue
-
-                # Skip invalid boxes
-                if box.x2 <= box.x1 or box.y2 <= box.y1:
-                    continue
-
-                # Convert to YOLO format: class_id x_center y_center width height (normalized)
-                x_center = ((box.x1 + box.x2) / 2) / img_w
-                y_center = ((box.y1 + box.y2) / 2) / img_h
-                width = (box.x2 - box.x1) / img_w
-                height = (box.y2 - box.y1) / img_h
-
-                # Final validation
-                if x_center > 1.0 or y_center > 1.0 or width > 1.0 or height > 1.0:
-                    continue
-
-                label_lines.append(
-                    f"{box.class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
-                )
-
-            # Save to .txt file in labels/ (not labels/train/)
-            label_filename = os.path.splitext(img.filename)[0] + ".txt"
-            label_path = os.path.join(labels_dir, label_filename)
-
-            with open(label_path, "w") as f:
-                f.write("\n".join(label_lines))
-
-            converted_count += 1
 
         return {
             "success": True,
-            "total_images": len(images),
-            "converted": converted_count,
+            "total_trainable_images": len(images),
+            "ready_for_training": ready_count,
+            "missing_images": missing_images,
+            "missing_labels": missing_labels,
             "labels_dir": labels_dir,
         }
-
 
 @router.post("/api/datasets/{dataset_id:int}/train")
 async def start_training(dataset_id: int):
