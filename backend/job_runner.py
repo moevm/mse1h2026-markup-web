@@ -80,7 +80,7 @@ def _run_train_job(job_id: int, dataset_id: int):
         raise RuntimeError("не удалось загрузить модель")
     _, _, model_version_id = _train_and_save(
         dataset, annotator, activate_new_version=True,
-        job_id=job_id, incremental=True
+        job_id=job_id
     )
     _mark_job_done(job_id, model_version_id=model_version_id)
 
