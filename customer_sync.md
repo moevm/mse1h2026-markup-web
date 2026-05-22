@@ -50,4 +50,14 @@
   - Трунов Б.Г.
 - **Запись встречи**: [url](https://drive.google.com/file/d/1F7XPcmsrIfO41u6JkZwKHyUC2GHwFXTb/view?usp=drive_link)
 
-
+## Созвон №4
+- **Дата**:22.05.2026
+- **Тема встречи**: Обсуждение итогов 3 итерации
+- **План встречи**:
+  - Демонстрация результатов
+- **Участники**:
+  - Клюканов В.К.
+  - Комаров Д.Е.
+  - Трунов Б.Г.
+  - Потапов Р.Ю.
+- **Запись встречи**: [url](https://drive.google.com/file/d/1lOUWhuSvrL8yVgigz_cf_iEbGV4e6fyr/view?usp=sharing)
