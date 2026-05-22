@@ -72,6 +72,7 @@ class DetectionsModule {
     Object.assign(d, patch);
     this.refreshBbox(id);
     if (this.selectedId === id) this.syncPopup(d);
+    this.onUpdate?.();
   }
 
   createBboxEl(d) {
@@ -173,6 +174,7 @@ class DetectionsModule {
       this.selectedId = null;
       this.closePopup();
     }
+    this.onDelete?.();
   }
 
   startMove(e, id) {
@@ -353,6 +355,7 @@ async onDocumentMouseUp(e) {
     this.selectBbox(newDet.id);
     this.openPopup(newDet.id, e.clientX, e.clientY);
     this.setMode('select');
+    this.onAdd?.();
   }
 }
 
