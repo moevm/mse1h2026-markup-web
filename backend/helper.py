@@ -436,3 +436,161 @@ def complete_batch_and_update_dataset_metrics(dataset_id: int, batch_id: int) ->
             "dataset_metrics_boxes_total": dataset.metrics_boxes_total,
             "dataset_metrics_images_total": dataset.metrics_images_total,
         }
+    
+
+def compute_average_precision(recalls: list[float], precisions: list[float]) -> float:
+    if not recalls or not precisions:
+        return 0.0
+
+    mrec = [0.0] + recalls + [1.0]
+    mpre = [0.0] + precisions + [0.0]
+
+    for i in range(len(mpre) - 2, -1, -1):
+        mpre[i] = max(mpre[i], mpre[i + 1])
+
+    ap = 0.0
+    for i in range(1, len(mrec)):
+        if mrec[i] != mrec[i - 1]:
+            ap += (mrec[i] - mrec[i - 1]) * mpre[i]
+
+    return ap
+
+
+def compute_map_metrics(
+    predictions_by_image: dict[str, list[dict]],
+    gt_by_image: dict[str, list[dict]],
+    num_classes: int,
+    iou_thresholds: list[float] | None = None,
+) -> dict:
+    # нормальный подсчет map
+    if iou_thresholds is None:
+        iou_thresholds = [round(0.50 + 0.05 * i, 2) for i in range(10)]
+
+    if num_classes <= 0:
+        return {"map50": 0.0, "map50_95": 0.0}
+
+    ap_by_threshold: dict[float, list[float]] = {}
+
+    for iou_threshold in iou_thresholds:
+        class_aps: list[float] = []
+
+        for class_id in range(num_classes):
+            gt_count = 0
+            gt_used_by_image: dict[str, set[int]] = {}
+            class_predictions: list[dict] = []
+
+            for image_filename, gt_boxes in gt_by_image.items():
+                gt_used_by_image[image_filename] = set()
+
+                for gt_idx, gt_box in enumerate(gt_boxes):
+                    if gt_box["class_id"] == class_id:
+                        gt_count += 1
+
+            for image_filename, pred_boxes in predictions_by_image.items():
+                for pred_box in pred_boxes:
+                    if pred_box["class_id"] != class_id:
+                        continue
+
+                    class_predictions.append(
+                        {
+                            "image_filename": image_filename,
+                            "confidence": float(pred_box.get("confidence", 0.0)),
+                            "x1": float(pred_box["x1"]),
+                            "y1": float(pred_box["y1"]),
+                            "x2": float(pred_box["x2"]),
+                            "y2": float(pred_box["y2"]),
+                        }
+                    )
+
+            if gt_count == 0:
+                continue
+
+            if not class_predictions:
+                class_aps.append(0.0)
+                continue
+
+            class_predictions.sort(
+                key=lambda item: item["confidence"],
+                reverse=True,
+            )
+
+            tp_values: list[int] = []
+            fp_values: list[int] = []
+
+            for pred in class_predictions:
+                image_filename = pred["image_filename"]
+                gt_boxes = gt_by_image.get(image_filename, [])
+
+                best_gt_idx = -1
+                best_iou = 0.0
+                pred_tuple = (
+                    pred["x1"],
+                    pred["y1"],
+                    pred["x2"],
+                    pred["y2"],
+                )
+
+                for gt_idx, gt_box in enumerate(gt_boxes):
+                    if gt_box["class_id"] != class_id:
+                        continue
+
+                    if gt_idx in gt_used_by_image.setdefault(image_filename, set()):
+                        continue
+
+                    gt_tuple = (
+                        float(gt_box["x1"]),
+                        float(gt_box["y1"]),
+                        float(gt_box["x2"]),
+                        float(gt_box["y2"]),
+                    )
+
+                    iou_value = compute_iou(pred_tuple, gt_tuple)
+
+                    if iou_value > best_iou:
+                        best_iou = iou_value
+                        best_gt_idx = gt_idx
+
+                if best_gt_idx >= 0 and best_iou >= iou_threshold:
+                    gt_used_by_image[image_filename].add(best_gt_idx)
+                    tp_values.append(1)
+                    fp_values.append(0)
+                else:
+                    tp_values.append(0)
+                    fp_values.append(1)
+
+            cumulative_tp = 0
+            cumulative_fp = 0
+            recalls: list[float] = []
+            precisions: list[float] = []
+
+            for tp, fp in zip(tp_values, fp_values):
+                cumulative_tp += tp
+                cumulative_fp += fp
+
+                recall = cumulative_tp / gt_count if gt_count > 0 else 0.0
+                precision = (
+                    cumulative_tp / (cumulative_tp + cumulative_fp)
+                    if (cumulative_tp + cumulative_fp) > 0
+                    else 0.0
+                )
+
+                recalls.append(recall)
+                precisions.append(precision)
+
+            class_aps.append(compute_average_precision(recalls, precisions))
+
+        ap_by_threshold[iou_threshold] = class_aps
+
+    map50_values = ap_by_threshold.get(0.5, [])
+    map50 = sum(map50_values) / len(map50_values) if map50_values else 0.0
+
+    all_ap_values: list[float] = []
+    for threshold_aps in ap_by_threshold.values():
+        all_ap_values.extend(threshold_aps)
+
+    map50_95 = sum(all_ap_values) / len(all_ap_values) if all_ap_values else 0.0
+
+    return {
+        "map50": map50,
+        "map50_95": map50_95,
+    }

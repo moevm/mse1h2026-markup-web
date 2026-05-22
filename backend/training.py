@@ -4,12 +4,11 @@ import tempfile
 from activate import Session
 from helper import invalidate_annotator
 import json
-from db import Dataset, ModelVersion, TrainingConfig, BoundingBoxClass
+from db import Dataset, ModelVersion, TrainingConfig, BoundingBoxClass, ImageStatus, DatasetImage, TrainingJobImage
 from ml_tracking import log_training_run
 
 from PIL import Image
 
-from db import ImageStatus, DatasetImage, TrainingJobImage, PredictionBox
 
 
 def _load_dataset_class_names(dataset_id: int) -> list[str]:
@@ -38,16 +37,26 @@ def _load_dataset_class_names(dataset_id: int) -> list[str]:
 
 def _get_trainable_images(dataset_id: int, incremental: bool = False) -> list[DatasetImage]:
     """
-    Возвращает изображения с нужными статусами.
-    Если incremental=True — только те, которые ещё не участвовали ни в одном обучении.
+    Возвращает изображения, которые можно использовать для обучения.
+
+    Если incremental=False — берет все изображения с trainable-статусами.
+    Если incremental=True — берет только те trainable-изображения,
+    которые еще не участвовали ни в одном training job.
     """
     with Session() as session:
         statuses = (
             session.query(ImageStatus)
-            .filter(ImageStatus.code.in_({"ready_for_training", "labeled"}))
+            .filter(
+                ImageStatus.code.in_(
+                    {"ready_for_training", "labeled"}
+                )
+            )
             .all()
         )
-        status_ids = {s.id for s in statuses}
+        status_ids = {status.id for status in statuses}
+
+        if not status_ids:
+            return []
 
         query = session.query(DatasetImage).filter(
             DatasetImage.dataset_id == dataset_id,
@@ -55,91 +64,56 @@ def _get_trainable_images(dataset_id: int, incremental: bool = False) -> list[Da
         )
 
         if incremental:
-            # исключаем те, что уже есть в training_job_image
-            already_trained_ids = session.query(
-                TrainingJobImage.dataset_image_id
-            ).filter(
-                TrainingJobImage.dataset_image_id == DatasetImage.id
-            ).scalar_subquery()
-
-            query = query.filter(
-                ~DatasetImage.id.in_(
-                    session.query(TrainingJobImage.dataset_image_id)
-                    .filter(
-                        TrainingJobImage.dataset_image_id == DatasetImage.id
-                    )
-                )
-            )
+            trained_ids_subquery = session.query(TrainingJobImage.dataset_image_id)
+            query = query.filter(~DatasetImage.id.in_(trained_ids_subquery))
 
         images = query.all()
-        for img in images:
-            session.expunge(img)
+
+        for image in images:
+            session.expunge(image)
+
         return images
-
-
-def _get_boxes_for_image(image_id: int) -> list[PredictionBox]:
-    with Session() as session:
-        boxes = (
-            session.query(PredictionBox)
-            .filter(PredictionBox.dataset_image_id == image_id)
-            .all()
-        )
-        for b in boxes:
-            session.expunge(b)
-        return boxes
-
 
 def _build_temp_dataset(dataset_path: str, images: list[DatasetImage]) -> str:
     """
     Строит временную папку со структурой YOLO:
       tmp/
-        images/  — симлинки на оригинальные файлы
-        labels/  — txt из БД
+        images/  — symlink на trainable изображения
+        labels/  — symlink на GT label-файлы с диска
+
+    GT-источник истины: dataset_path/labels/<filename>.txt
     """
     tmp_dir = tempfile.mkdtemp(prefix="yolo_train_")
     images_dir = os.path.join(tmp_dir, "images")
     labels_dir = os.path.join(tmp_dir, "labels")
-    os.makedirs(images_dir)
-    os.makedirs(labels_dir)
+
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(labels_dir, exist_ok=True)
+
+    added_count = 0
 
     for img in images:
-        src = os.path.join(dataset_path, "images", img.filename)
-        if not os.path.exists(src):
+        image_src = os.path.join(dataset_path, "images", img.filename)
+        stem = os.path.splitext(img.filename)[0]
+        label_src = os.path.join(dataset_path, "labels", stem + ".txt")
+
+        if not os.path.exists(image_src):
             continue
 
-        dst = os.path.join(images_dir, img.filename)
-        os.symlink(src, dst)
-
-        boxes = _get_boxes_for_image(img.id)
-        if not boxes:
+        if not os.path.exists(label_src):
             continue
 
-        with Image.open(src) as pil_img:
-            img_w, img_h = pil_img.size
+        image_dst = os.path.join(images_dir, img.filename)
+        label_dst = os.path.join(labels_dir, stem + ".txt")
 
-        label_lines = []
-        for box in boxes:
-            if box.x2 <= box.x1 or box.y2 <= box.y1:
-                continue
-            if box.x1 < 0 or box.y1 < 0 or box.x2 > img_w or box.y2 > img_h:
-                continue
+        os.symlink(image_src, image_dst)
+        os.symlink(label_src, label_dst)
 
-            x_center = ((box.x1 + box.x2) / 2) / img_w
-            y_center = ((box.y1 + box.y2) / 2) / img_h
-            width = (box.x2 - box.x1) / img_w
-            height = (box.y2 - box.y1) / img_h
+        added_count += 1
 
-            if any(v > 1.0 for v in [x_center, y_center, width, height]):
-                continue
-
-            label_lines.append(
-                f"{box.class_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}"
-            )
-
-        if label_lines:
-            stem = os.path.splitext(img.filename)[0]
-            with open(os.path.join(labels_dir, stem + ".txt"), "w") as f:
-                f.write("\n".join(label_lines))
+    if added_count == 0:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise RuntimeError("не удалось собрать train dataset: нет изображений с GT labels")
 
     return tmp_dir
 
@@ -202,6 +176,8 @@ def _train_and_save(
         and last_map < config.augmentation_threshold
     ) if config else False
 
+    model_path = None
+    version = None  
     try:
         if config:
             model_path, version = annotator.train(

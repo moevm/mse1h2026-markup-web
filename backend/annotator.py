@@ -5,7 +5,7 @@ import os
 import shutil
 import glob
 
-from helper import read_gt_boxes_px, match_image_boxes, save_auto_accepted_labels
+from helper import read_gt_boxes_px, match_image_boxes, save_auto_accepted_labels,  compute_map_metrics
 
 
 class AutoAnnotator:
@@ -163,6 +163,9 @@ class AutoAnnotator:
         matched_ious: list[float] = []
         confusion_matrix = [[0 for _ in class_names] for _ in class_names]
 
+        predictions_by_image: dict[str, list[dict]] = {}
+        gt_by_image: dict[str, list[dict]] = {}
+
         for label_file in os.listdir(labels_dir):
             if not label_file.lower().endswith(".txt"):
                 continue
@@ -185,6 +188,7 @@ class AutoAnnotator:
             pred_boxes = [
                 {
                     "class_id": int(pred["class_id"]),
+                    "confidence": float(pred["confidence"]),
                     "x1": float(pred["x1"]),
                     "y1": float(pred["y1"]),
                     "x2": float(pred["x2"]),
@@ -192,6 +196,8 @@ class AutoAnnotator:
                 }
                 for pred in self.predict(image_path, conf=0.25)
             ]
+            predictions_by_image[os.path.basename(image_path)] = pred_boxes
+            gt_by_image[os.path.basename(image_path)] = gt_boxes
 
             image_metrics = match_image_boxes(pred_boxes, gt_boxes)
 
@@ -220,12 +226,18 @@ class AutoAnnotator:
         )
         mean_iou = sum(matched_ious) / len(matched_ious) if matched_ious else 0.0
 
+        map_metrics = compute_map_metrics(
+            predictions_by_image=predictions_by_image,
+            gt_by_image=gt_by_image,
+            num_classes=len(class_names),
+        )
+
         return {
             "precision": round(precision, 4),
             "recall": round(recall, 4),
             "f1": round(f1, 4),
-            "map50": round(precision, 4),
-            "map50_95": round(mean_iou, 4),
+            "map50": round(map_metrics["map50"], 4),
+            "map50_95": round(map_metrics["map50_95"], 4),
             "mean_iou": round(mean_iou, 4),
             "confusion_matrix": confusion_matrix,
         }
