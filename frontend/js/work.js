@@ -136,13 +136,23 @@ refreshCurrentModel();
 
 classesManager.init(dataset.id);
 
+let renderDebounced;
+const scheduleRender = () => {
+  clearTimeout(renderDebounced);
+  renderDebounced = setTimeout(() => renderObjectList(), 50);
+};
+
 detectionsModule.init('scene', 'detection-layer', 'edit-popup', dataset.id);
+detectionsModule.onDelete = () => renderObjectList();
+detectionsModule.onAdd = () => renderObjectList();
+detectionsModule.onUpdate = scheduleRender;
 
 document.getElementById('btn-select')?.addEventListener('click', () => detectionsModule.setMode('select'));
 document.getElementById('btn-draw')?.addEventListener('click', () => detectionsModule.setMode('draw'));
 document.getElementById('btn-delete-sel')?.addEventListener('click', () => {
   if (detectionsModule.selectedId !== null) {
     detectionsModule.delete(detectionsModule.selectedId);
+    renderObjectList();
   }
 });
 
