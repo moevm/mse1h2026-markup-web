@@ -58,6 +58,7 @@
           <div class="section-workspace__dataset-model">
             <h2 class="section-workspace__dataset-model-name" id="dataset-model"></h2>
             <button class="section-workspace__button--change-model" id="change-model-button">Изменить модель</button>
+            <button class="section-workspace__button--change-model" id="change-model-hyperparams-button">Изменить гиперпараметры</button>
           </div>
           <div class="section-workspace__toolbar-image-actions">
             <button class="section-workspace__tool-btn section-workspace__tool-btn--active" id="btn-select" title="S">
@@ -214,6 +215,48 @@
         <button class="change-model-modal__btn" id="change-model-cancel">Отменить</button>
         <button class="change-model-modal__btn change-model-modal__btn--primary"
           id="change-model-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+  <div class="change-model-overlay" id="change-model-hyperparams-overlay" style="display:none">
+    <div class="change-model-modal">
+      <div class="change-model-modal__header">
+        <h3 class="change-model-modal__title">Изменить гиперпараметры модели</h3>
+        <button class="change-model-modal__close" id="change-model-hyperparams-close" aria-label="Закрыть">&times;</button>
+      </div>
+      <div class="change-model-modal__body">
+        <div class="model-input-box">
+          <label for="model-epochs">epochs</label>
+          <input type="number" id="model-epochs">
+        </div>
+        <div class="model-input-box">
+          <label for="model-batch-size">batch_size</label>
+          <input type="number" id="model-batch-size">
+        </div>
+        <div class="model-input-box">
+          <label for="model-learning-rate">learning_rate</label>
+          <input type="number" id="model-learning-rate">
+        </div>
+        <div class="model-input-box">
+          <label for="model-imgsz">imgsz</label>
+          <input type="number" id="model-imgsz">
+        </div>
+        <div class="model-input-box">
+          <label for="model-optimizer">optimizer</label>
+          <input type="text" id="model-optimizer">
+        </div>
+        <div class="model-input-box">
+        <label class="change-model-modal__label" for="model-device">Выберите устройство обработки:</label>
+        <select class="change-model-modal__select" id="model-device">
+          <option value="cuda">cuda</option>
+          <option value="cpu">cpu</option>
+        </select>
+        </div>
+      </div>
+      <div class="change-model-modal__footer">
+        <button class="change-model-modal__btn" id="change-model-hyperparams-cancel">Отменить</button>
+        <button class="change-model-modal__btn change-model-modal__btn--primary"
+          id="change-model-hyperparams-save">Сохранить</button>
       </div>
     </div>
   </div>

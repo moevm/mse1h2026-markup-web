@@ -502,3 +502,30 @@
 .popup-close:hover {
   color: #fff;
 }
+
+.model-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-input-box label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.model-input-box input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.model-input-box input:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}

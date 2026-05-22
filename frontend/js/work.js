@@ -649,6 +649,38 @@ window.DetectionOverlay = {
   setImage: (src) => detectionsModule.setImage(src)
 };
 
+
+const changeModelParamsOverlay = document.getElementById('change-model-hyperparams-overlay');
+
+async function openChangeParamsModelModal() {
+  try {
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/hyperparams`);
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+    const params = await res.json();
+
+    document.getElementById('model-epochs').value = params.epochs ?? '';
+    document.getElementById('model-batch-size').value = params.batch_size ?? '';
+    document.getElementById('model-learning-rate').value = params.learning_rate ?? '';
+    document.getElementById('model-imgsz').value = params.imgsz ?? '';
+    document.getElementById('model-optimizer').value = params.optimizer ?? '';
+    document.getElementById('model-device').value = params.device ?? 'cuda';
+
+    changeModelParamsOverlay.style.display = 'flex';
+  } catch (err) {
+    Notify.error(`Ошибка загрузки гиперпараметров: ${err.message}`);
+  }
+}
+
+function closeChangeModelParamsModal() {
+  changeModelParamsOverlay.style.display = 'none';
+}
+
+document.getElementById('change-model-hyperparams-close').addEventListener('click', closeChangeModelParamsModal);
+document.getElementById('change-model-hyperparams-cancel').addEventListener('click', closeChangeModelParamsModal);
+changeModelParamsOverlay.addEventListener('click', e => {
+  if (e.target === changeModelParamsOverlay) closeChangeModelParamsModal();
+});
+
 const changeModelOverlay = document.getElementById('change-model-overlay');
 const changeModelSelect = document.getElementById('change-model-select');
 const changeModelInfoName = document.getElementById('change-model-info-name');
@@ -743,5 +775,45 @@ document.getElementById('change-model-save').addEventListener('click', async () 
   }
 });
 
+document.getElementById('change-model-hyperparams-save').addEventListener('click', async () => {
+  const epochs = parseInt(document.getElementById('model-epochs').value);
+  const batch_size = parseInt(document.getElementById('model-batch-size').value);
+  const learning_rate = parseFloat(document.getElementById('model-learning-rate').value);
+  const imgsz = parseInt(document.getElementById('model-imgsz').value);
+  const optimizer = document.getElementById('model-optimizer').value.trim();
+  const device = document.getElementById('model-device').value;
+
+  if ([epochs, batch_size, imgsz].some(v => isNaN(v) || v <= 0)) {
+    Notify.error('epochs, batch_size и imgsz должны быть положительными числами');
+    return;
+  }
+  if (isNaN(learning_rate) || learning_rate <= 0) {
+    Notify.error('learning_rate должен быть положительным числом');
+    return;
+  }
+  if (!optimizer) {
+    Notify.error('optimizer не может быть пустым');
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:8000/api/datasets/${dataset.id}/hyperparams`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ epochs, batch_size, learning_rate, imgsz, optimizer, device })
+    });
+
+    if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+
+    Notify.success('Гиперпараметры успешно сохранены');
+    changeModelParamsOverlay.style.display = 'none';
+  } catch (err) {
+    Notify.error(`Ошибка при сохранении: ${err.message}`);
+  }
+});
+
 document.getElementById('change-model-button')
   ?.addEventListener('click', openChangeModelModal);
+
+document.getElementById('change-model-hyperparams-button')
+  ?.addEventListener('click', openChangeParamsModelModal);
