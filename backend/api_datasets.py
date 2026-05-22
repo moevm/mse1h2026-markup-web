@@ -161,12 +161,17 @@ class ChangeModelRequest(BaseModel):
 
 
 class TrainingConfigRequest(BaseModel):
-    epochs: Optional[int] = None
-    batch_size: Optional[int] = None
-    learning_rate: Optional[float] = None
-    imgsz: Optional[int] = None
-    optimizer: Optional[str] = None
-    device: Optional[str] = None
+    epochs: int | None = None
+    batch_size: int | None = None
+    learning_rate: float | None = None
+    imgsz: int | None = None
+    optimizer: str | None = None
+    augmentation_enabled: bool | None = None
+    augmentation_threshold: float | None = None
+    auto_accept_enabled: bool | None = None
+    auto_accept_confidence_threshold: float | None = None
+    incremental_training_enabled: bool | None = None
+    device: str | None = None
 
 
 class AugmentationConfigRequest(BaseModel):
@@ -184,18 +189,21 @@ class ClassesRequest(BaseModel):
     classes: list[ClassItem]
 
 
-@router.get("/api/datasets/{dataset_id}/classes")
-async def get_dataset_classes(dataset_id: int):
-    with Session() as session:
-        classes = (
-            session.query(BoundingBoxClass)
-            .filter(BoundingBoxClass.dataset_id == dataset_id)
-            .order_by(BoundingBoxClass.class_id)
-            .all()
-        )
-        return [
-            {"class_id": c.class_id, "name": c.name, "color": c.color} for c in classes
-        ]
+
+# дубликат, я не знаю какая ручка верная
+
+# @router.get("/api/datasets/{dataset_id}/classes")
+# async def get_dataset_classes(dataset_id: int):
+#     with Session() as session:
+#         classes = (
+#             session.query(BoundingBoxClass)
+#             .filter(BoundingBoxClass.dataset_id == dataset_id)
+#             .order_by(BoundingBoxClass.class_id)
+#             .all()
+#         )
+#         return [
+#             {"class_id": c.class_id, "name": c.name, "color": c.color} for c in classes
+#         ]
 
 
 @router.get("/api/getDatasets")
@@ -784,6 +792,11 @@ async def get_hyperparams(dataset_id: int):
             "imgsz": config.imgsz,
             "optimizer": config.optimizer,
             "device": config.device,
+            "augmentation_enabled": config.augmentation_enabled,
+            "augmentation_threshold": config.augmentation_threshold,
+            "auto_accept_enabled": config.auto_accept_enabled,
+            "auto_accept_confidence_threshold": config.auto_accept_confidence_threshold,
+            "incremental_training_enabled": config.incremental_training_enabled
         }
 
 
@@ -820,6 +833,19 @@ async def update_hyperparams(dataset_id: int, body: TrainingConfigRequest):
             config.imgsz = body.imgsz
         if body.optimizer is not None:
             config.optimizer = body.optimizer
+
+        if body.augmentation_enabled is not None:
+            config.augmentation_enabled = body.augmentation_enabled
+        if body.augmentation_threshold is not None:
+            config.augmentation_threshold = body.augmentation_threshold
+
+        if body.auto_accept_enabled is not None:
+            config.auto_accept_enabled = body.auto_accept_enabled
+        if body.auto_accept_confidence_threshold is not None:
+            config.auto_accept_confidence_threshold = body.auto_accept_confidence_threshold
+
+        if body.incremental_training_enabled is not None:
+            config.incremental_training_enabled = body.incremental_training_enabled
 
         # Проверяем, изменился ли девайс, чтобы знать нужно ли сбрасывать кэш
         if body.device is not None and config.device != body.device:

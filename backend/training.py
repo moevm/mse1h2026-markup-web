@@ -135,7 +135,7 @@ def _train_and_save(
     activate_new_version: bool = True,
     architecture_override: str | None = None,
     job_id: int | None = None,
-    incremental: bool = False,
+    incremental: bool | None = None
 ) -> tuple[str, int, int]:
     """
     job_id     — если передан, записывает использованные изображения в TrainingJobImage
@@ -157,6 +157,9 @@ def _train_and_save(
             .first()
         )
         last_map = last_version.map50_95 if last_version else None
+
+    if incremental is None:
+        incremental = config.incremental_training_enabled if config else False
 
     class_names = _load_dataset_class_names(dataset.id)
 

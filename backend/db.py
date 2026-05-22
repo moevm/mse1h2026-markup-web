@@ -77,6 +77,7 @@ class TrainingConfig(Base):
     auto_accept_enabled: Mapped[bool] = mapped_column(default=False)
     auto_accept_confidence_threshold: Mapped[float] = mapped_column(default=0.85)
     device: Mapped[str] = mapped_column(String(50), default="cuda")
+    incremental_training_enabled: Mapped[bool] = mapped_column(default=False)
 
 
 class TrainingJob(Base):
