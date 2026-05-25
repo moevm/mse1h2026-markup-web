@@ -85,7 +85,7 @@
 
 ## Итерация №4
 ### Презентация
-[Презентация итерация 3](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_4.pdf)
+[Презентация итерация 4](https://github.com/moevm/mse1h2026-markup-web/blob/reports/docs/iter_4.pdf)
 ### Скринкасты
 [Скринкаст](https://disk.yandex.ru/i/nTb7ckvtAFZM6Q)
 ### Запланированные задачи
